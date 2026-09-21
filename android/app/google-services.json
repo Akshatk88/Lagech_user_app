@@ -1,0 +1,67 @@
+{
+  "project_info": {
+    "project_number": "1094463683805",
+    "project_id": "appzeto-food-b99c7",
+    "storage_bucket": "appzeto-food-b99c7.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1094463683805:android:d89dd8ba1755d003baaf34",
+        "android_client_info": {
+          "package_name": "com.appzeto.food"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyD4YwYvy4Y8GwZjFFEKht1Dpa_1-qajeJE"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1094463683805:android:bb977ec4a941493ebaaf34",
+        "android_client_info": {
+          "package_name": "com.appzetofood.delivery"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyD4YwYvy4Y8GwZjFFEKht1Dpa_1-qajeJE"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1094463683805:android:0601ad0c8441d2ecbaaf34",
+        "android_client_info": {
+          "package_name": "com.appzetofood.restaurant"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyD4YwYvy4Y8GwZjFFEKht1Dpa_1-qajeJE"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
