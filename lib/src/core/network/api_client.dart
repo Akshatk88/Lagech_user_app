@@ -304,7 +304,11 @@ class _CacheInterceptor extends Interceptor {
   T? peek<T>(String path, Map<String, dynamic>? query) {
     final hit = _cache[_keyFor(path, query)];
     if (hit == null || hit.expiresAt.isBefore(DateTime.now())) return null;
-    return hit.data as T;
+    // Stored as the raw `{ success, message, data }` body; callers expect the
+    // unwrapped `data`, the same as a live response gives them.
+    final data = hit.data;
+    if (data is Map && data.containsKey('data')) return data['data'] as T;
+    return data as T;
   }
 
   @override

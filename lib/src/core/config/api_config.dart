@@ -17,10 +17,24 @@ class ApiConfig {
   /// Resolves a possibly-relative upload path (`/uploads/...`) to an absolute
   /// URL. The API mixes absolute and relative image paths across endpoints.
   static String resolveMedia(String? path) {
-    if (path == null || path.isEmpty) return '';
-    if (path.startsWith('http://') || path.startsWith('https://')) return path;
-    return path.startsWith('/') ? '$host$path' : '$host/$path';
+    if (path == null || path.trim().isEmpty) return '';
+    final p = path.trim();
+    if (p.startsWith('http://') || p.startsWith('https://')) return p;
+    if (p.startsWith('//')) return 'https:$p';
+    return p.startsWith('/') ? '$mediaHost$p' : '$mediaHost/$p';
   }
+
+  /// Origin that serves `/uploads`. Taken from [baseUrl] (the API is known to
+  /// work) so a missing or scheme-less `API_HOST` define can't break images.
+  static final String mediaHost = () {
+    final api = Uri.tryParse(baseUrl);
+    if (api != null && api.hasScheme && api.host.isNotEmpty) {
+      return '${api.scheme}://${api.authority}';
+    }
+    var h = host.trim();
+    if (!h.startsWith('http://') && !h.startsWith('https://')) h = 'https://$h';
+    return h.endsWith('/') ? h.substring(0, h.length - 1) : h;
+  }();
 }
 
 /// Endpoint paths, relative to [ApiConfig.baseUrl].
