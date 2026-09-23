@@ -159,19 +159,31 @@ class RestaurantModel {
 
   /// Maps a backend restaurant document.
   factory RestaurantModel.fromApi(Map<String, dynamic> json) {
-    final image = json['profileImage'];
-    final imageUrlRaw = image is Map ? image['url'] as String? : image as String?;
+    final image = json['profileImage'] ?? json['logo'] ?? json['image'];
+    final imageUrlRaw = image is Map
+        ? (image['url'] ?? image['imageUrl']) as String?
+        : image as String?;
     
     final coversRaw = (json['coverImages'] as List?)
-        ?.map((e) => e is Map ? e['url'] as String? : e as String?)
+        ?.map((e) => e is Map ? (e['url'] ?? e['imageUrl']) as String? : e as String?)
         .whereType<String>()
         .where((s) => s.isNotEmpty)
         .toList() ?? const [];
 
-    final resolvedCovers = coversRaw.map((c) => ApiConfig.resolveMedia(c)).toList();
+    final singleCover = json['coverImage'];
+    final singleCoverUrl = singleCover is Map
+        ? (singleCover['url'] ?? singleCover['imageUrl']) as String?
+        : singleCover as String?;
+
+    final allCovers = [
+      ...coversRaw,
+      if (coversRaw.isEmpty && singleCoverUrl != null && singleCoverUrl.isNotEmpty) singleCoverUrl,
+    ];
+
+    final resolvedCovers = allCovers.map((c) => ApiConfig.resolveMedia(c)).toList();
 
     final menusRaw = (json['menuImages'] as List?)
-        ?.map((e) => e is Map ? e['url'] as String? : e as String?)
+        ?.map((e) => e is Map ? (e['url'] ?? e['imageUrl']) as String? : e as String?)
         .whereType<String>()
         .where((s) => s.isNotEmpty)
         .toList() ?? const [];
@@ -246,7 +258,7 @@ class RestaurantModel {
       imageUrl: primaryImageUrl,
       coverImages: resolvedCovers.isNotEmpty ? resolvedCovers : (primaryImageUrl.isNotEmpty ? [primaryImageUrl] : const []),
       menuImages: resolvedMenuImages,
-      rating: parseDouble(json['rating']),
+      rating: parseDouble(json['rating'] ?? json['avgRating'] ?? json['averageRating'] ?? json['ratingAverage'] ?? json['ratings']),
       reviewCount: parseInt(json['totalRatings'] ?? json['reviewCount']),
       deliveryTime: deliveryTimeStr,
       deliveryFee: parseDouble(json['deliveryFee']),

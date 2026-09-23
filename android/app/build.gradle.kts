@@ -15,16 +15,14 @@ plugins {
 }
 
 android {
-    namespace = "com.appzeto.food_user_application"
+    namespace = "com.lagech.user"
 
-    // 34 se 36 kiya - androidx.browser, media3, activity-ktx jaise packages ko 36 chahiye
     compileSdk = 36
 
-    // Agar NDK installed nahi hai toh ise comment out kar dein
     ndkVersion = "28.2.13676358"
 
     defaultConfig {
-        applicationId = "com.appzeto.food"
+        applicationId = "com.lagech.user"
 
         minSdk = flutter.minSdkVersion
         targetSdk = flutter.targetSdkVersion
@@ -34,7 +32,6 @@ android {
 
         multiDexEnabled = true
 
-        // Yahan apni real Google Maps API key dalein ya valid placeholder rakhein
         manifestPlaceholders["MAPS_API_KEY"] = "YOUR_VALID_MAPS_API_KEY_HERE"
     }
 
@@ -82,11 +79,22 @@ flutter {
 }
 
 dependencies {
+    // Existing
     coreLibraryDesugaring(
         "com.android.tools:desugar_jdk_libs:2.1.4"
     )
 
     implementation(
         "androidx.multidex:multidex:2.0.1"
+    )
+
+    // Firebase BoM
+    implementation(
+        platform("com.google.firebase:firebase-bom:34.19.0")
+    )
+
+    // Firebase Analytics
+    implementation(
+        "com.google.firebase:firebase-analytics"
     )
 }

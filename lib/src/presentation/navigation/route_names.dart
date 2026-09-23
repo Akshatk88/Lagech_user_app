@@ -34,4 +34,5 @@ class RouteNames {
   static const String termsConditions = '/terms-conditions';
   static const String editProfile = '/edit-profile';
   static const String categoryDetails = '/category-details';
+  static const String popularDishes = '/popular-dishes';
 }

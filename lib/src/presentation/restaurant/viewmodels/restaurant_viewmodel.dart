@@ -103,6 +103,16 @@ class RestaurantViewModel extends Notifier<RestaurantState> {
     _updateFilteredList();
   }
 
+  void toggleBestSeller() {
+    state = state.copyWith(isBestSellerOnly: !state.isBestSellerOnly);
+    _updateFilteredList();
+  }
+
+  void toggleRatingSort() {
+    state = state.copyWith(isRatingSort: !state.isRatingSort);
+    _updateFilteredList();
+  }
+
   void _updateFilteredList() {
     final filtered = _applyFilters(state.allItems, state);
     state = state.copyWith(filteredItems: filtered);
@@ -118,6 +128,8 @@ class RestaurantViewModel extends Notifier<RestaurantState> {
       isVegOnly: effectiveVegOnly,
       isNonVegOnly: effectiveVegOnly ? false : currentState.isNonVegOnly,
       isMinRating4: currentState.isMinRating4,
+      isBestSellerOnly: currentState.isBestSellerOnly,
+      isRatingSort: currentState.isRatingSort,
     );
   }
 }

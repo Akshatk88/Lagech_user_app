@@ -10,6 +10,7 @@ import '../orders/widgets/floating_active_order_card.dart';
 import 'widgets/custom_bottom_nav.dart';
 import '../cart/viewmodels/cart_viewmodel.dart';
 import '../navigation/route_names.dart';
+import '../home/viewmodels/home_scroll_provider.dart';
 
 import 'package:flutter/services.dart';
 import '../common_widgets/exit_confirmation_dialog.dart';
@@ -56,6 +57,9 @@ class MainAppShell extends ConsumerWidget {
             ? (isCartBarVisible ? (bottomOffset + 56.0 + 16.0) : 12.0)
             : -120.0;
 
+        final isCart = currentPath == RouteNames.cart ||
+            navigationShell.currentIndex == 1;
+
         return PopScope(
           canPop: false,
           onPopInvokedWithResult: (didPop, result) async {
@@ -70,7 +74,7 @@ class MainAppShell extends ConsumerWidget {
             }
           },
           child: Scaffold(
-          extendBody: true,
+          extendBody: !isCart,
           backgroundColor: Theme.of(context).scaffoldBackgroundColor,
           body: Stack(
             children: [
@@ -97,21 +101,26 @@ class MainAppShell extends ConsumerWidget {
                 ),
             ],
           ),
-          bottomNavigationBar: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const OfflineBanner(),
-              CustomBottomNav(
-                currentIndex: navigationShell.currentIndex,
-                onTap: (index) {
-                  navigationShell.goBranch(
-                    index,
-                    initialLocation: index == navigationShell.currentIndex,
-                  );
-                },
-              ),
-            ],
-          ),
+          bottomNavigationBar: isCart
+              ? null
+              : Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const OfflineBanner(),
+                    CustomBottomNav(
+                      currentIndex: navigationShell.currentIndex,
+                      onTap: (index) {
+                        if (index == 0 && navigationShell.currentIndex == 0) {
+                          ref.read(homeScrollToTopProvider.notifier).increment();
+                        }
+                        navigationShell.goBranch(
+                          index,
+                          initialLocation: index == navigationShell.currentIndex,
+                        );
+                      },
+                    ),
+                  ],
+                ),
           ),
         );
       },

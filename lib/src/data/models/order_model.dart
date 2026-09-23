@@ -706,9 +706,22 @@ class OrderModel {
       dispatchStatus: (dispatch['status'] ?? '').toString(),
       restaurantId: (restaurantMap['_id'] ?? restaurantMap['id'] ?? (restaurant is String ? restaurant : '')).toString(),
       restaurantName: (restaurantMap['restaurantName'] ?? restaurantMap['name'] ?? json['restaurantName'] ?? '').toString(),
-      restaurantImage: ApiConfig.resolveMedia(
-        restaurantMap['profileImage'] as String? ?? restaurantMap['image'] as String?,
-      ),
+      restaurantImage: ApiConfig.resolveMedia(() {
+        final restProfileImg = restaurantMap['profileImage'];
+        final restProfileUrl = restProfileImg is Map
+            ? (restProfileImg['url'] ?? restProfileImg['imageUrl']) as String?
+            : restProfileImg as String?;
+        final restCovers = (restaurantMap['coverImages'] as List?)
+            ?.map((e) => e is Map ? (e['url'] ?? e['imageUrl']) as String? : e as String?)
+            .whereType<String>()
+            .where((s) => s.isNotEmpty)
+            .toList() ?? const [];
+        return (restProfileUrl != null && restProfileUrl.isNotEmpty)
+            ? restProfileUrl
+            : (restaurantMap['image'] is String && (restaurantMap['image'] as String).isNotEmpty
+                ? restaurantMap['image'] as String
+                : (restCovers.isNotEmpty ? restCovers.first : null));
+      }()),
       restaurantAddress: (restaurantMap['address'] ?? '').toString(),
       restaurantRating: _money(restaurantMap['rating']),
       restaurantIsOpen: restaurantMap['isOpen'] == true || restaurantMap['isOpen']?.toString().toLowerCase() == 'true',

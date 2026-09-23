@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
-import '../../../../generated/l10n/app_localizations.dart';
 import '../../../core/utils/haptics.dart';
 import '../../branding/app_colors.dart';
 import '../../navigation/route_names.dart';
@@ -20,65 +19,67 @@ class CustomBottomNav extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
-    final l10n = AppLocalizations.of(context)!;
 
     return Container(
-      margin: EdgeInsets.only(bottom: 24.h, left: 16.w, right: 16.w),
       decoration: BoxDecoration(
         color: isDark ? AppColors.surfaceDark : Colors.white,
-        borderRadius: BorderRadius.circular(40.r),
+        border: Border(
+          top: BorderSide(
+            color: isDark ? AppColors.borderDark : const Color(0xFFE5E7EB),
+            width: 1,
+          ),
+        ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.08),
-            blurRadius: 20,
-            offset: const Offset(0, 4),
+            color: Colors.black.withValues(alpha: isDark ? 0.25 : 0.04),
+            blurRadius: 10,
+            offset: const Offset(0, -2),
           ),
         ],
       ),
       child: SafeArea(
         top: false,
-        bottom: false,
         child: Padding(
-          padding: EdgeInsets.symmetric(horizontal: 8.0.w, vertical: 8.0.h),
+          padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 8.h),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceAround,
             children: [
-              // 1. Home (Branch 0)
+              // 1. Delivery / Food (Active in Screenshot)
               _buildNavItem(
                 context: context,
-                icon: Icons.home_outlined,
-                activeIcon: Icons.home_rounded,
-                label: l10n.home,
+                icon: Icons.delivery_dining_outlined,
+                activeIcon: Icons.delivery_dining_rounded,
+                label: 'Delivery',
                 index: 0,
                 isDark: isDark,
               ),
 
-              // 2. Search (reusing Branch 1 or route)
+              // 2. Offers
               _buildNavItem(
                 context: context,
-                icon: Icons.search_outlined,
-                activeIcon: Icons.search_rounded,
-                label: 'Search',
-                index: 1, // assuming branch 1 is search or handled separately
+                icon: Icons.local_offer_outlined,
+                activeIcon: Icons.local_offer_rounded,
+                label: 'Offers',
+                index: 98,
                 isDark: isDark,
               ),
 
-              // 3. Orders (Route /orders)
+              // 3. Dining
               _buildNavItem(
                 context: context,
-                icon: Icons.receipt_long_outlined,
-                activeIcon: Icons.receipt_long_rounded,
-                label: l10n.orders,
+                icon: Icons.restaurant_outlined,
+                activeIcon: Icons.restaurant_rounded,
+                label: 'Dining',
                 index: 99,
                 isDark: isDark,
               ),
 
-              // 4. Profile (Branch 3)
+              // 4. Profile
               _buildNavItem(
                 context: context,
                 icon: Icons.person_outline_rounded,
                 activeIcon: Icons.person_rounded,
-                label: l10n.profile,
+                label: 'Profile',
                 index: 3,
                 isDark: isDark,
               ),
@@ -97,55 +98,43 @@ class CustomBottomNav extends StatelessWidget {
     required int index,
     required bool isDark,
   }) {
-    // Current route checking for index 99 (Orders) or 1 (Search) if they are pushed instead of branched
     final isSelected = currentIndex == index;
-    final activeColor = const Color(0xFF38019D); // Dark purple from mockup
-    final unselectedColor = Colors.grey.shade500;
-    
-    // Background for active item (light purple)
-    final activeBgColor = const Color(0xFFF3E8FF); 
+    // Green active color matching screenshot
+    const activeColor = Color(0xFF16A34A);
+    final unselectedColor = isDark
+        ? AppColors.textSecondaryDark
+        : const Color(0xFF9CA3AF);
 
     return GestureDetector(
       onTap: () {
         Haptics.light();
-        if (index == 99) {
+        if (index == 98) {
+          context.push(RouteNames.allOffers);
+        } else if (index == 99) {
           context.push(RouteNames.orders);
-        } else if (index == 1) {
-          context.push(RouteNames.search);
         } else {
           onTap(index);
         }
       },
       behavior: HitTestBehavior.opaque,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
-        padding: EdgeInsets.symmetric(
-          horizontal: isSelected ? 16.w : 12.w, 
-          vertical: 10.h,
-        ),
-        decoration: BoxDecoration(
-          color: isSelected ? activeBgColor : Colors.transparent,
-          borderRadius: BorderRadius.circular(24.r),
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(
-              isSelected ? activeIcon : icon,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            isSelected ? activeIcon : icon,
+            color: isSelected ? activeColor : unselectedColor,
+            size: 26.sp,
+          ),
+          SizedBox(height: 3.h),
+          Text(
+            label,
+            style: TextStyle(
               color: isSelected ? activeColor : unselectedColor,
-              size: 24.sp,
+              fontSize: 10.5.sp,
+              fontWeight: isSelected ? FontWeight.w800 : FontWeight.w500,
             ),
-            SizedBox(height: 2.h),
-            Text(
-              label,
-              style: TextStyle(
-                color: isSelected ? activeColor : unselectedColor,
-                fontSize: 10.sp,
-                fontWeight: isSelected ? FontWeight.w800 : FontWeight.w500,
-              ),
-            ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }

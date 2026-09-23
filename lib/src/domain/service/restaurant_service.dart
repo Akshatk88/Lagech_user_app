@@ -123,7 +123,7 @@ class RestaurantService {
     return map;
   }
 
-  /// Filters food items based on query, selected category, veg/non-veg toggles, and rating.
+  /// Filters food items based on query, selected category, veg/non-veg toggles, bestseller, and rating.
   List<FoodModel> filterMenu({
     required List<FoodModel> items,
     required String query,
@@ -131,6 +131,8 @@ class RestaurantService {
     required bool isVegOnly,
     required bool isNonVegOnly,
     required bool isMinRating4,
+    bool isBestSellerOnly = false,
+    bool isRatingSort = false,
   }) {
     var result = List<FoodModel>.from(items);
 
@@ -156,9 +158,35 @@ class RestaurantService {
       result = result.where((f) => !f.isVeg).toList();
     }
 
-    // 4. Rating Filter
+    // 4. Rating Filter (4.0+)
     if (isMinRating4) {
       result = result.where((f) => f.rating >= 4.0).toList();
+    }
+
+    // 5. Best Seller Filter (bestselling dishes of this restaurant)
+    if (isBestSellerOnly) {
+      final popular = result.where((f) => f.isPopular).toList();
+      if (popular.isNotEmpty) {
+        result = popular;
+      } else {
+        // Fallback: prioritize dishes with highest rating or reviews
+        final sorted = List<FoodModel>.from(result)
+          ..sort((a, b) {
+            final cmp = b.rating.compareTo(a.rating);
+            if (cmp != 0) return cmp;
+            return b.reviewCount.compareTo(a.reviewCount);
+          });
+        result = sorted.take((result.length * 0.6).ceil().clamp(1, result.length)).toList();
+      }
+    }
+
+    // 6. Rating Sort (highest rated food displayed first)
+    if (isRatingSort) {
+      result.sort((a, b) {
+        final cmp = b.rating.compareTo(a.rating);
+        if (cmp != 0) return cmp;
+        return b.reviewCount.compareTo(a.reviewCount);
+      });
     }
 
     return result;

@@ -11,6 +11,7 @@ import '../../branding/app_colors.dart';
 import '../../common_widgets/app_snackbar.dart';
 import '../../navigation/route_names.dart';
 import '../viewmodels/auth_viewmodel.dart';
+import '../../../di/push_providers.dart';
 import 'profile_setup_screen.dart';
 
 class OtpScreen extends ConsumerStatefulWidget {
@@ -200,11 +201,13 @@ class _OtpScreenState extends ConsumerState<OtpScreen> {
     }
 
     final notifier = ref.read(authViewModelProvider.notifier);
+    final fcmToken = ref.read(pushServiceProvider).token;
 
     final session = await notifier.verifyOtp(
       phone: widget.phoneNumber,
       otp: enteredOtp,
       name: widget.name,
+      fcmToken: fcmToken,
     );
 
     if (!mounted) return;

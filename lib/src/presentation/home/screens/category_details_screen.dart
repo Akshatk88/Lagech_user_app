@@ -13,6 +13,7 @@ import '../../cart/utils/cart_restaurant_guard.dart';
 import '../../cart/widgets/floating_view_cart_bar.dart';
 import '../../common_widgets/smart_image.dart';
 import '../../navigation/route_names.dart';
+import '../../restaurant/widgets/food_detail_sheet.dart';
 import '../widgets/restaurant_card.dart';
 
 final categoryFoodsProvider =
@@ -21,15 +22,48 @@ final categoryFoodsProvider =
       category,
     ) async {
       final repo = ref.watch(restaurantRepositoryProvider);
+      
+      // 1. Direct query with category id and name
       final res = await repo.getFoodsByCategory(
         category.id,
         categoryName: category.name,
         realCategoryId: category.id,
       );
-      if (res.isSuccess) {
-        return res.data ?? [];
+      if (res.isSuccess && (res.data ?? []).isNotEmpty) {
+        return res.data!;
       }
-      return [];
+
+      // 2. Fallback query with category name only
+      if (category.name.isNotEmpty) {
+        final resByName = await repo.getFoodsByCategory(
+          '',
+          categoryName: category.name,
+        );
+        if (resByName.isSuccess && (resByName.data ?? []).isNotEmpty) {
+          return resByName.data!;
+        }
+      }
+
+      // 3. Fallback: Search all foods by keyword (e.g. Pasta, Italian)
+      try {
+        final allFoodsRes = await repo.getPopularFoods();
+        if (allFoodsRes.isSuccess && (allFoodsRes.data ?? []).isNotEmpty) {
+          final query = category.name.trim().toLowerCase();
+          final matched = allFoodsRes.data!.where((f) {
+            final name = f.name.toLowerCase();
+            final catName = f.categoryName.toLowerCase();
+            final desc = f.description.toLowerCase();
+            return catName.contains(query) ||
+                name.contains(query) ||
+                desc.contains(query);
+          }).toList();
+          if (matched.isNotEmpty) {
+            return matched;
+          }
+        }
+      } catch (_) {}
+
+      return res.data ?? [];
     });
 
 final categoryRestaurantsProvider =
@@ -259,18 +293,13 @@ class _CategoryDetailsScreenState extends ConsumerState<CategoryDetailsScreen>
           ),
 
           // Floating Cart Bar
-          Positioned(
-            left: 0,
-            right: 0,
-            bottom: 0,
-            child: FloatingViewCartBar(
-              key: _cartBarKey,
-              bottomOffset: 12.h,
-              onTap: () {
-                Haptics.light();
-                context.push(RouteNames.cart);
-              },
-            ),
+          FloatingViewCartBar(
+            key: _cartBarKey,
+            bottomOffset: 12.h,
+            onTap: () {
+              Haptics.light();
+              context.push(RouteNames.cart);
+            },
           ),
         ],
       ),
@@ -324,11 +353,12 @@ class _CategoryDetailsScreenState extends ConsumerState<CategoryDetailsScreen>
         }
 
         return ListView.separated(
+          physics: const AlwaysScrollableScrollPhysics(),
           padding: EdgeInsets.only(
             left: 16.w,
             right: 16.w,
             top: 14.h,
-            bottom: 80.h,
+            bottom: 100.h,
           ),
           itemCount: foods.length,
           separatorBuilder: (context, index) => SizedBox(height: 12.h),
@@ -403,11 +433,12 @@ class _CategoryDetailsScreenState extends ConsumerState<CategoryDetailsScreen>
         }
 
         return ListView.separated(
+          physics: const AlwaysScrollableScrollPhysics(),
           padding: EdgeInsets.only(
             left: 16.w,
             right: 16.w,
             top: 14.h,
-            bottom: 80.h,
+            bottom: 100.h,
           ),
           itemCount: restaurants.length,
           separatorBuilder: (context, index) => SizedBox(height: 14.h),
@@ -444,7 +475,7 @@ class _CategoryDetailsScreenState extends ConsumerState<CategoryDetailsScreen>
     return GestureDetector(
       onTap: () {
         Haptics.light();
-        context.push(RouteNames.foodDetail, extra: food);
+        FoodDetailSheet.show(context, food);
       },
       child: Container(
         padding: EdgeInsets.all(12.r),
@@ -543,14 +574,42 @@ class _CategoryDetailsScreenState extends ConsumerState<CategoryDetailsScreen>
 
                   // Restaurant Name
                   if (food.restaurantName.isNotEmpty) ...[
-                    Text(
-                      food.restaurantName,
-                      style: TextStyle(
-                        fontSize: 12.sp,
-                        color: const Color(0xFF8E8E93),
+                    GestureDetector(
+                      behavior: HitTestBehavior.opaque,
+                      onTap: () {
+                        Haptics.light();
+                        if (food.restaurantId.isNotEmpty) {
+                          context.push('${RouteNames.restaurantDetail}/${food.restaurantId}');
+                        }
+                      },
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            Icons.storefront_rounded,
+                            size: 13.sp,
+                            color: const Color(0xFFE52020),
+                          ),
+                          SizedBox(width: 3.w),
+                          Flexible(
+                            child: Text(
+                              food.restaurantName,
+                              style: TextStyle(
+                                fontSize: 12.sp,
+                                color: const Color(0xFFE52020),
+                                fontWeight: FontWeight.w600,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                          Icon(
+                            Icons.chevron_right_rounded,
+                            size: 14.sp,
+                            color: const Color(0xFFE52020),
+                          ),
+                        ],
                       ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
                     ),
                     SizedBox(height: 3.h),
                   ],

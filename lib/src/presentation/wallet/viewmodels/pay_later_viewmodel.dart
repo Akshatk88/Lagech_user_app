@@ -39,7 +39,10 @@ final payLaterViewModelProvider = NotifierProvider<PayLaterViewModel, PayLaterSt
 class PayLaterViewModel extends Notifier<PayLaterState> {
   @override
   PayLaterState build() {
-    unawaited(refresh());
+    // Schedule refresh AFTER build() returns so `state` is initialized first.
+    // Calling refresh() directly inside build() caused "Bad state: uninitialized
+    // provider" because refresh() reads `state` before build() has returned it.
+    Future.microtask(refresh);
     return const PayLaterState(status: PayLaterStatus.loading);
   }
 

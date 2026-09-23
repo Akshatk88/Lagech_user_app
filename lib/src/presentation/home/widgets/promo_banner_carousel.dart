@@ -7,7 +7,6 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../../../core/utils/haptics.dart';
 import '../../../data/models/promo_banner_model.dart';
-import '../../branding/app_colors.dart';
 import '../../common_widgets/smart_image.dart';
 
 /// Auto-rotating carousel of admin-uploaded promo banners.
@@ -34,7 +33,7 @@ class _PromoBannerCarouselState extends State<PromoBannerCarousel> {
   @override
   void initState() {
     super.initState();
-    _controller = PageController(viewportFraction: 0.93);
+    _controller = PageController();
     _startTimer();
   }
 
@@ -101,12 +100,13 @@ class _PromoBannerCarouselState extends State<PromoBannerCarousel> {
   Widget build(BuildContext context) {
     if (widget.banners.isEmpty) return const SizedBox.shrink();
 
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        SizedBox(
-          height: 195.h,
-          child: NotificationListener<ScrollNotification>(
+    return SizedBox(
+      height: 195.h,
+      width: double.infinity,
+      child: Stack(
+        alignment: Alignment.bottomCenter,
+        children: [
+          NotificationListener<ScrollNotification>(
             onNotification: (n) {
               if (n is ScrollStartNotification) _userInteracting = true;
               if (n is ScrollEndNotification) _userInteracting = false;
@@ -118,50 +118,44 @@ class _PromoBannerCarouselState extends State<PromoBannerCarousel> {
               onPageChanged: (i) => setState(() => _index = i),
               itemBuilder: (context, i) {
                 final banner = widget.banners[i];
-                return Padding(
-                  padding: EdgeInsets.symmetric(horizontal: 6.w),
-                  child: GestureDetector(
-                    onTap: () => _openBanner(banner),
-                    child: ClipRRect(
-                      borderRadius: BorderRadius.circular(16.r),
-                      child: SmartImage(
-                        url: banner.imageUrl,
-                        category: ImageCategory.food,
-                        fit: BoxFit.cover,
-                        width: double.infinity,
-                        height: double.infinity,
-                      ),
-                    ),
+                return GestureDetector(
+                  onTap: () => _openBanner(banner),
+                  child: SmartImage(
+                    url: banner.imageUrl,
+                    category: ImageCategory.food,
+                    fit: BoxFit.cover,
+                    width: double.infinity,
+                    height: double.infinity,
                   ),
                 );
               },
             ),
           ),
-        ),
-        // Dots are pointless for a single banner — they would imply there is
-        // something else to swipe to.
-        if (widget.banners.length > 1) ...[
-          SizedBox(height: 10.h),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: List.generate(widget.banners.length, (i) {
-              final active = i == _index;
-              return AnimatedContainer(
-                duration: const Duration(milliseconds: 250),
-                margin: EdgeInsets.symmetric(horizontal: 3.w),
-                width: active ? 18.w : 6.w,
-                height: 6.h,
-                decoration: BoxDecoration(
-                  color: active
-                      ? AppColors.primary
-                      : AppColors.primary.withValues(alpha: 0.25),
-                  borderRadius: BorderRadius.circular(3.r),
-                ),
-              );
-            }),
-          ),
+          // Overlaid indicator dots at the bottom of the banner
+          if (widget.banners.length > 1)
+            Positioned(
+              bottom: 10.h,
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: List.generate(widget.banners.length, (i) {
+                  final active = i == _index;
+                  return AnimatedContainer(
+                    duration: const Duration(milliseconds: 250),
+                    margin: EdgeInsets.symmetric(horizontal: 3.w),
+                    width: active ? 18.w : 6.w,
+                    height: 6.h,
+                    decoration: BoxDecoration(
+                      color: active
+                          ? Colors.white
+                          : Colors.white.withValues(alpha: 0.4),
+                      borderRadius: BorderRadius.circular(3.r),
+                    ),
+                  );
+                }),
+              ),
+            ),
         ],
-      ],
+      ),
     );
   }
 }

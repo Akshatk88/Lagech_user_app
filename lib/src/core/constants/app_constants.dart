@@ -46,29 +46,29 @@ class AppConstants {
     defaultValue: hostUrl,
   );
 
-  /// Firebase project configuration for User App (com.appzeto.food).
+  /// Firebase project configuration for User App (com.lagech.user).
   static String firebaseApiKey = (kIsWeb || Platform.isAndroid)
-      ? "AIzaSyC_twLhO7C21HdRBvoZvedceka0jdLCUjc"
+      ? "AIzaSyDit5-NkEfNpibI4XB9NkJklSwkqcrLz6c"
       : "ios firebase api key";
 
   static String get firbaseApiKey => firebaseApiKey;
 
   static String firebaseAppId = (kIsWeb || Platform.isAndroid)
-      ? "1:592916974677:android:5366c1825a27cf201518dc"
+      ? "1:857925379912:android:bc587d6759fce9ee00357d"
       : "ios firebase app id";
 
   static String firebaseMessagingSenderId = (kIsWeb || Platform.isAndroid)
-      ? "592916974677"
+      ? "857925379912"
       : "ios firebase sender id";
 
   static String get firebasemessagingSenderId => firebaseMessagingSenderId;
 
   static String firebaseProjectId = (kIsWeb || Platform.isAndroid)
-      ? "flutterfoodapp-e6742"
+      ? "lagech-6be7b"
       : "ios firebase project id";
 
   static String firebaseDatabaseUrl =
-      "https://flutterfoodapp-e6742-default-rtdb.firebaseio.com";
+      "https://lagech-6be7b-default-rtdb.firebaseio.com";
 
   /// Google Maps API key (Maps SDK + Geocoding API).
   static String mapKey = 'AIzaSyCLHQKJg5shpKs0uNiDHiZJTtBUMKl21ak';
@@ -83,6 +83,6 @@ class AppConstants {
     LocaleLanguageList(name: 'English', lang: 'en'),
   ];
 
-  static String packageName = 'com.appzeto.food';
+  static String packageName = 'com.lagech.user';
   static String signKey = '';
 }

@@ -102,6 +102,53 @@ Notification Body: $body
 Payload: $payload
 Order ID: ${link.trackableOrderId ?? "N/A"}
 Notification Type: ${link.type}''');
+
+  // Display local notification in background/terminated state
+  try {
+    final localNotifications = FlutterLocalNotificationsPlugin();
+    const androidSettings = AndroidInitializationSettings('@mipmap/ic_launcher');
+    const initSettings = InitializationSettings(android: androidSettings);
+    await localNotifications.initialize(settings: initSettings);
+
+    const androidChannel = AndroidNotificationChannel(
+      'high_importance_channel',
+      'High Importance Notifications',
+      description: 'This channel is used for order status push notifications.',
+      importance: Importance.max,
+      playSound: true,
+      enableVibration: true,
+    );
+
+    await localNotifications
+        .resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>()
+        ?.createNotificationChannel(androidChannel);
+
+    final notificationId = ((message.messageId?.hashCode ?? message.hashCode)) & 0x7fffffff;
+
+    const androidDetails = AndroidNotificationDetails(
+      'high_importance_channel',
+      'High Importance Notifications',
+      channelDescription: 'This channel is used for order status push notifications.',
+      importance: Importance.max,
+      priority: Priority.high,
+      ticker: 'ticker',
+      playSound: true,
+      enableVibration: true,
+      icon: '@mipmap/ic_launcher',
+    );
+    const notificationDetails = NotificationDetails(android: androidDetails);
+
+    await localNotifications.show(
+      id: notificationId,
+      title: title,
+      body: body,
+      notificationDetails: notificationDetails,
+      payload: jsonEncode(message.data),
+    );
+    debugPrint('[FCM] Background local notification displayed successfully');
+  } catch (e) {
+    debugPrint('[FCM] Error displaying background notification: $e');
+  }
 }
 
 /// Firebase Cloud Messaging wiring.
@@ -251,7 +298,7 @@ Notification Type: ${link.type}''');
 
         final title = message.notification?.title ?? message.data['title'] ?? 'Order Update';
         final body = message.notification?.body ?? message.data['body'] ?? '';
-        final notificationId = message.hashCode;
+        final notificationId = ((message.messageId?.hashCode ?? message.hashCode)) & 0x7fffffff;
 
         _log('Displaying local notification.');
         try {

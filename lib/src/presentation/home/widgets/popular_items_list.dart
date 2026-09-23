@@ -32,9 +32,6 @@ class PopularItemsList extends ConsumerWidget {
     this.is99Store = true,
   });
 
-  /// Card width and total card height — sized to match content cleanly.
-  static const double _cardWidth = 132;
-  static const double _cardHeight = 162;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -140,15 +137,16 @@ class PopularItemsList extends ConsumerWidget {
                   text: TextSpan(
                     text: 'Popular ',
                     style: TextStyle(
-                      fontSize: 16.sp,
+                      fontSize: 18.sp,
                       fontWeight: FontWeight.w900,
-                      color: isDark ? AppColors.textPrimaryDark : Colors.black87,
+                      letterSpacing: 0.2,
+                      color: isDark ? AppColors.textPrimaryDark : const Color(0xFF1E293B),
                     ),
                     children: [
                       TextSpan(
                         text: 'Dishes',
                         style: TextStyle(
-                          color: const Color(0xFFF57F17),
+                          color: AppColors.primary,
                         ),
                       ),
                     ],
@@ -157,7 +155,8 @@ class PopularItemsList extends ConsumerWidget {
                 const Spacer(),
                 InkWell(
                   onTap: () {
-                    // TODO: Navigate to popular dishes
+                    Haptics.light();
+                    context.push(RouteNames.popularDishes);
                   },
                   child: Row(
                     children: [
@@ -165,7 +164,7 @@ class PopularItemsList extends ConsumerWidget {
                         'See All',
                         style: TextStyle(
                           color: Colors.grey.shade600,
-                          fontSize: 12.sp,
+                          fontSize: 12.5.sp,
                           fontWeight: FontWeight.w500,
                         ),
                       ),
@@ -180,26 +179,25 @@ class PopularItemsList extends ConsumerWidget {
               ],
             ),
           ),
-        SizedBox(height: 8.h),
+        SizedBox(height: 10.h),
 
-        // 2-row horizontal-scrolling grid
+        // Single-row horizontal-scrolling list with 3 cards visible on screen
         SizedBox(
-          height: _cardHeight.h * 2 + 10.h,
-          child: GridView.builder(
-            padding: EdgeInsets.symmetric(horizontal: 16.w),
+          height: 160.h,
+          child: ListView.separated(
+            padding: EdgeInsets.symmetric(horizontal: 12.w),
             scrollDirection: Axis.horizontal,
             physics: const BouncingScrollPhysics(),
             itemCount: eligibleFoods.length,
-            gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: 2,
-              mainAxisSpacing: 10.w,
-              crossAxisSpacing: 10.h,
-              mainAxisExtent: _cardWidth.w,
-            ),
+            separatorBuilder: (context, index) => SizedBox(width: 8.w),
             itemBuilder: (context, index) {
               final food = eligibleFoods[index];
+              final resName = food.restaurantName.isNotEmpty
+                  ? food.restaurantName
+                  : (restaurants.where((r) => r.id == food.restaurantId).firstOrNull?.name ?? '');
               return _Home99ProductCard(
                 food: food,
+                restaurantName: resName,
                 isDark: isDark,
                 cartBarKey: cartBarKey,
                 onAddToCartAnimationComplete: onAddToCartAnimationComplete,
@@ -214,12 +212,14 @@ class PopularItemsList extends ConsumerWidget {
 
 class _Home99ProductCard extends ConsumerStatefulWidget {
   final FoodModel food;
+  final String restaurantName;
   final bool isDark;
   final GlobalKey<FloatingViewCartBarState>? cartBarKey;
   final VoidCallback? onAddToCartAnimationComplete;
 
   const _Home99ProductCard({
     required this.food,
+    this.restaurantName = '',
     required this.isDark,
     this.cartBarKey,
     this.onAddToCartAnimationComplete,
@@ -241,7 +241,6 @@ class _Home99ProductCardState extends ConsumerState<_Home99ProductCard> {
   Widget build(BuildContext context) {
     final cartState = ref.watch(cartViewModelProvider);
 
-    // Find quantity and cart item ID for this food
     int quantity = 0;
     String? cartItemId;
     for (final item in cartState.items) {
@@ -252,273 +251,257 @@ class _Home99ProductCardState extends ConsumerState<_Home99ProductCard> {
       }
     }
 
-    final secondary = widget.isDark
-        ? AppColors.textSecondaryDark
-        : AppColors.textSecondaryLight;
     final hasQty = quantity > 0;
 
     return GestureDetector(
       onTap: () {
         Haptics.light();
-        FoodDetailSheet.show(context, widget.food);
+        FoodDetailSheet.show(
+          context,
+          widget.food,
+          restaurantName: widget.restaurantName,
+        );
       },
       child: Container(
+        width: 106.w,
+        height: 152.h,
         decoration: BoxDecoration(
-          color: widget.isDark ? AppColors.surfaceDark : AppColors.cardLight,
-          borderRadius: BorderRadius.circular(16.r),
-          boxShadow: widget.isDark
-              ? []
-              : [
-                  BoxShadow(
-                    color: AppColors.shadow1,
-                    blurRadius: 8,
-                    offset: const Offset(0, 2),
-                  ),
-                ],
+          color: widget.isDark ? AppColors.surfaceDark : Colors.white,
+          borderRadius: BorderRadius.circular(14.r),
+          border: Border.all(
+            color: widget.isDark
+                ? AppColors.borderDark
+                : Colors.black.withValues(alpha: 0.04),
+            width: 1,
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(
+                alpha: widget.isDark ? 0.3 : 0.06,
+              ),
+              blurRadius: 8,
+              offset: const Offset(0, 2),
+            ),
+          ],
         ),
         child: Column(
-          mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Image + rating badge (bottom-left) + animated add/counter button (bottom-right).
-            SizedBox(
-              height: 92.h,
-              width: double.infinity,
-              child: Stack(
-                fit: StackFit.expand,
-                children: [
-                  ClipRRect(
-                    borderRadius: BorderRadius.vertical(
-                      top: Radius.circular(16.r),
-                    ),
-                    child: SmartImage(
-                      key: _imageKey,
-                      url: widget.food.imageUrl,
-                      category: ImageCategory.food,
-                      fit: BoxFit.cover,
-                    ),
-                  ),
-                  if (widget.food.rating > 0)
-                    Positioned(
-                      bottom: 6.h,
-                      left: 6.w,
-                      child: Container(
-                        padding: EdgeInsets.symmetric(
-                          horizontal: 6.w,
-                          vertical: 3.h,
-                        ),
-                        decoration: BoxDecoration(
-                          color: AppColors.success,
-                          borderRadius: BorderRadius.circular(8.r),
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(
-                              Icons.star_rounded,
-                              color: Colors.white,
-                              size: 11.sp,
-                            ),
-                            SizedBox(width: 2.w),
-                            Text(
-                              widget.food.rating.toStringAsFixed(1),
-                              style: TextStyle(
-                                color: Colors.white,
-                                fontSize: 10.5.sp,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-
-                  // Animated Morphing Add / Counter Button matching design 100%
-                  Positioned(
-                    bottom: 6.h,
-                    right: 6.w,
-                    child: AnimatedContainer(
-                      duration: const Duration(milliseconds: 250),
-                      curve: Curves.easeOutCubic,
-                      width: hasQty ? 68.w : 28.r,
-                      height: 28.r,
-                      decoration: BoxDecoration(
-                        color: widget.isDark
-                            ? AppColors.surfaceDark
-                            : Colors.white,
-                        borderRadius: BorderRadius.circular(14.r),
-                        border: Border.all(
-                          color: hasQty
-                              ? AppColors.primary
-                              : (widget.isDark
-                                    ? AppColors.borderDark
-                                    : AppColors.borderLight),
-                          width: hasQty ? 1.2 : 1.0,
-                        ),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withValues(
-                              alpha: widget.isDark ? 0.3 : 0.15,
-                            ),
-                            blurRadius: 6,
-                            offset: const Offset(0, 2),
-                          ),
-                        ],
-                      ),
-                      child: Material(
-                        type: MaterialType.transparency,
-                        child: AnimatedSwitcher(
-                          duration: const Duration(milliseconds: 200),
-                          switchInCurve: Curves.easeOutBack,
-                          switchOutCurve: Curves.easeIn,
-                          transitionBuilder: (child, anim) => ScaleTransition(
-                            scale: anim,
-                            child: FadeTransition(opacity: anim, child: child),
-                          ),
-                          child: !hasQty
-                              ? InkWell(
-                                  key: const ValueKey('home_99_add_btn'),
-                                  onTap: _handleFirstAddToCart,
-                                  borderRadius: BorderRadius.circular(14.r),
-                                  child: Center(
-                                    child: Icon(
-                                      Icons.add,
-                                      color: AppColors.primary,
-                                      size: 18.sp,
-                                    ),
-                                  ),
-                                )
-                              : Row(
-                                  key: const ValueKey('home_99_stepper'),
-                                  mainAxisAlignment:
-                                      MainAxisAlignment.spaceBetween,
-                                  children: [
-                                    InkWell(
-                                      onTap: cartItemId == null
-                                          ? null
-                                          : () {
-                                              Haptics.light();
-                                              ref
-                                                  .read(
-                                                    cartViewModelProvider
-                                                        .notifier,
-                                                  )
-                                                  .updateQuantity(
-                                                    cartItemId!,
-                                                    quantity - 1,
-                                                  );
-                                            },
-                                      borderRadius: BorderRadius.only(
-                                        topLeft: Radius.circular(14.r),
-                                        bottomLeft: Radius.circular(14.r),
-                                      ),
-                                      child: Padding(
-                                        padding: EdgeInsets.symmetric(
-                                          horizontal: 4.w,
-                                        ),
-                                        child: Icon(
-                                          Icons.remove,
-                                          color: AppColors.primary,
-                                          size: 14.sp,
-                                        ),
-                                      ),
-                                    ),
-                                    Text(
-                                      '$quantity',
-                                      style: TextStyle(
-                                        color: AppColors.primary,
-                                        fontWeight: FontWeight.w900,
-                                        fontSize: 12.5.sp,
-                                      ),
-                                    ),
-                                    InkWell(
-                                      onTap: cartItemId == null
-                                          ? null
-                                          : () {
-                                              Haptics.light();
-                                              ref
-                                                  .read(
-                                                    cartViewModelProvider
-                                                        .notifier,
-                                                  )
-                                                  .updateQuantity(
-                                                    cartItemId!,
-                                                    quantity + 1,
-                                                  );
-                                            },
-                                      borderRadius: BorderRadius.only(
-                                        topRight: Radius.circular(14.r),
-                                        bottomRight: Radius.circular(14.r),
-                                      ),
-                                      child: Padding(
-                                        padding: EdgeInsets.symmetric(
-                                          horizontal: 4.w,
-                                        ),
-                                        child: Icon(
-                                          Icons.add,
-                                          color: AppColors.primary,
-                                          size: 14.sp,
-                                        ),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
+            // Top Image - properly sized for 3 cards per screen
+            ClipRRect(
+              borderRadius: BorderRadius.vertical(
+                top: Radius.circular(14.r),
+              ),
+              child: SmartImage(
+                key: _imageKey,
+                url: widget.food.imageUrl,
+                category: ImageCategory.food,
+                height: 76.h,
+                width: 106.w,
+                fit: BoxFit.cover,
               ),
             ),
 
-            // Details — name, time, price.
+            // Card details: Name, Restaurant, Price & Orange Circular Add Button
             Padding(
-              padding: EdgeInsets.fromLTRB(8.r, 6.r, 8.r, 6.r),
+              padding: EdgeInsets.fromLTRB(6.w, 4.h, 6.w, 4.h),
               child: Column(
-                mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
                 children: [
+                  // Row 1: Veg indicator + Dish Name
+                  Row(
+                    children: [
+                      if (widget.food.isVeg) ...[
+                        Container(
+                          margin: EdgeInsets.only(right: 3.w),
+                          width: 10.r,
+                          height: 10.r,
+                          decoration: BoxDecoration(
+                            border: Border.all(
+                              color: const Color(0xFF008A45),
+                              width: 1.1,
+                            ),
+                            borderRadius: BorderRadius.circular(2.5.r),
+                          ),
+                          child: Center(
+                            child: Container(
+                              width: 4.r,
+                              height: 4.r,
+                              decoration: const BoxDecoration(
+                                shape: BoxShape.circle,
+                                color: Color(0xFF008A45),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                      Expanded(
+                        child: Text(
+                          widget.food.name,
+                          style: TextStyle(
+                            fontSize: 12.sp,
+                            fontWeight: FontWeight.w700,
+                            color: widget.isDark
+                                ? AppColors.textPrimaryDark
+                                : const Color(0xFF1E293B),
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ],
+                  ),
+
+                  SizedBox(height: 1.5.h),
+
+                  // Row 2: Restaurant Name
                   Text(
-                    widget.food.name,
+                    widget.restaurantName.isNotEmpty
+                        ? widget.restaurantName
+                        : (widget.food.categoryName.isNotEmpty
+                            ? widget.food.categoryName
+                            : 'Restaurant'),
                     style: TextStyle(
-                      fontSize: 12.sp,
-                      fontWeight: FontWeight.bold,
+                      fontSize: 10.5.sp,
+                      fontWeight: FontWeight.w400,
                       color: widget.isDark
-                          ? AppColors.textPrimaryDark
-                          : AppColors.textPrimaryLight,
+                          ? AppColors.textSecondaryDark
+                          : const Color(0xFF94A3B8),
                     ),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                   ),
-                  if (widget.food.deliveryTime.isNotEmpty) ...[
-                    SizedBox(height: 3.h),
-                    Row(
-                      children: [
-                        Icon(
-                          Icons.timer_outlined,
-                          size: 10.5.sp,
-                          color: secondary,
-                        ),
-                        SizedBox(width: 3.w),
-                        Text(
-                          widget.food.deliveryTime,
+
+                  SizedBox(height: 2.5.h),
+
+                  // Row 3: Price + Circular Add Button
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: [
+                      Expanded(
+                        child: Text(
+                          '₹${widget.food.price.toStringAsFixed(2)}',
                           style: TextStyle(
-                            fontSize: 10.sp,
-                            color: secondary,
-                            fontWeight: FontWeight.w500,
+                            fontSize: 11.5.sp,
+                            fontWeight: FontWeight.w800,
+                            color: widget.isDark
+                                ? Colors.white
+                                : const Color(0xFF1E293B),
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+
+                      // Add / Stepper Button
+                      if (!hasQty)
+                        InkWell(
+                          key: const ValueKey('popular_add_btn'),
+                          onTap: _handleFirstAddToCart,
+                          borderRadius: BorderRadius.circular(12.r),
+                          child: Container(
+                            width: 24.r,
+                            height: 24.r,
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              border: Border.all(
+                                color: AppColors.primary,
+                                width: 1.2,
+                              ),
+                              color: widget.isDark
+                                  ? AppColors.surfaceDark
+                                  : Colors.white,
+                            ),
+                            child: Center(
+                              child: Icon(
+                                Icons.add,
+                                color: AppColors.primary,
+                                size: 15,
+                              ),
+                            ),
+                          ),
+                        )
+                      else
+                        Container(
+                          height: 24.r,
+                          padding: EdgeInsets.symmetric(horizontal: 3.w),
+                          decoration: BoxDecoration(
+                            color: widget.isDark
+                                ? AppColors.surfaceDark
+                                : Colors.white,
+                            borderRadius: BorderRadius.circular(12.r),
+                            border: Border.all(
+                              color: AppColors.primary,
+                              width: 1.2,
+                            ),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              InkWell(
+                                onTap: cartItemId == null
+                                    ? null
+                                    : () {
+                                        Haptics.light();
+                                        ref
+                                            .read(
+                                              cartViewModelProvider.notifier,
+                                            )
+                                            .updateQuantity(
+                                              cartItemId!,
+                                              quantity - 1,
+                                            );
+                                      },
+                                child: Padding(
+                                  padding: EdgeInsets.symmetric(
+                                    horizontal: 2.w,
+                                  ),
+                                  child: Icon(
+                                    Icons.remove,
+                                    color: AppColors.primary,
+                                    size: 11,
+                                  ),
+                                ),
+                              ),
+                              Text(
+                                '$quantity',
+                                style: TextStyle(
+                                  color: AppColors.primary,
+                                  fontWeight: FontWeight.w900,
+                                  fontSize: 11,
+                                ),
+                              ),
+                              InkWell(
+                                onTap: cartItemId == null
+                                    ? null
+                                    : () {
+                                        Haptics.light();
+                                        ref
+                                            .read(
+                                              cartViewModelProvider.notifier,
+                                            )
+                                            .updateQuantity(
+                                              cartItemId!,
+                                              quantity + 1,
+                                            );
+                                      },
+                                child: Padding(
+                                  padding: EdgeInsets.symmetric(
+                                    horizontal: 2.w,
+                                  ),
+                                  child: Icon(
+                                    Icons.add,
+                                    color: AppColors.primary,
+                                    size: 11,
+                                  ),
+                                ),
+                              ),
+                            ],
                           ),
                         ),
-                      ],
-                    ),
-                  ],
-                  SizedBox(height: 3.h),
-                  Text(
-                    '₹${widget.food.price.toStringAsFixed(0)}',
-                    style: TextStyle(
-                      fontSize: 13.sp,
-                      color: AppColors.primary,
-                      fontWeight: FontWeight.w900,
-                    ),
+                    ],
                   ),
                 ],
               ),

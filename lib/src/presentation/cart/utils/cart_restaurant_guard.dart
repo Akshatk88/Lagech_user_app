@@ -6,6 +6,7 @@ import '../../../data/models/food_variant.dart';
 import '../../../di/catalog_providers.dart';
 import '../../branding/app_colors.dart';
 import '../../restaurant/widgets/food_detail_sheet.dart';
+import '../../restaurant/widgets/variant_picker_sheet.dart';
 import '../viewmodels/cart_viewmodel.dart';
 
 /// Confirms with the user before wiping their cart for a different
@@ -60,10 +61,18 @@ Future<void> addFoodToCart(
       !fromBottomSheet;
 
   if (needsSelection) {
-    await FoodDetailSheet.show(
+    final selection = await VariantPickerSheet.show(context, food);
+    if (selection == null || !context.mounted) return;
+    await addFoodToCart(
       context,
+      ref,
       food,
-      autoScrollToOptions: true,
+      selectedVariant: selection.variant?.name,
+      selectedVariantPrice: selection.variantDelta(food.price),
+      selectedAddons: selection.addons.map((a) => a.id).toList(),
+      selectedAddonsPrice: selection.addonTotal,
+      selectedAddonDetails: selection.addons,
+      fromBottomSheet: true,
     );
     return;
   }

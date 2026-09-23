@@ -17,7 +17,7 @@ enum AppThemeColor {
   purple('Purple', Color(0xFF7B2D8E), Color(0xFF9B4FB0), '🟣'),
   green('Green', Color(0xFF16A34A), Color(0xFF22B85C), '🟢'),
   blue('Blue', Color(0xFF3B82F6), Color(0xFF5B95F8), '🔵'),
-  red('Red', Color(0xFFE11D48), Color(0xFFEF4060), '🔴');
+  red('Red', Color(0xFFE50914), Color(0xFFB8000C), '🔴');
 
   const AppThemeColor(this.label, this.color, this.buttonColor, this.emoji);
 

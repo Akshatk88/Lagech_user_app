@@ -73,6 +73,30 @@ class CatalogRemoteDataSource {
         .toList();
   }
 
+  List<CategoryModel> _orderCategories(List<CategoryModel> list) {
+    const preferredPrefixes = ['pizza', 'burger', 'sandwich', 'momo'];
+    final reversed = list.reversed.toList();
+    final priorityItems = <CategoryModel>[];
+    final otherItems = <CategoryModel>[];
+
+    for (final prefix in preferredPrefixes) {
+      final matches = reversed
+          .where((c) =>
+              c.name.toLowerCase().contains(prefix) &&
+              !priorityItems.contains(c))
+          .toList();
+      priorityItems.addAll(matches);
+    }
+
+    for (final c in reversed) {
+      if (!priorityItems.contains(c)) {
+        otherItems.add(c);
+      }
+    }
+
+    return [...priorityItems, ...otherItems];
+  }
+
   List<CategoryModel> _deduplicateCategories(List<CategoryModel> list) {
     final seenIds = <String>{};
     final seenNames = <String>{};
@@ -86,7 +110,7 @@ class CatalogRemoteDataSource {
       if (nameKey.isNotEmpty) seenNames.add(nameKey);
       result.add(cat);
     }
-    return result;
+    return _orderCategories(result);
   }
 
   Future<List<CategoryModel>> getExploreIcons() async {
@@ -216,7 +240,7 @@ class CatalogRemoteDataSource {
     String? categoryId,
     String? categoryName,
     String? promo,
-    int limit = 200,
+    int limit = 5000,
     void Function(List<FoodModel>)? onCache,
   }) async {
     List<FoodModel> parse(Map<String, dynamic> data) => ((data['foods'] as List?) ?? const [])

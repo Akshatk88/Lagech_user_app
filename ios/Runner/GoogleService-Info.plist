@@ -9,7 +9,7 @@
 	<key>PLIST_VERSION</key>
 	<string>1</string>
 	<key>BUNDLE_ID</key>
-	<string>com.appzetofood.user</string>
+	<string>com.lagech.user</string>
 	<key>PROJECT_ID</key>
 	<string>appzeto-food-b99c7</string>
 	<key>STORAGE_BUCKET</key>

@@ -506,14 +506,49 @@ class _FoodDetailScreenState extends ConsumerState<FoodDetailScreen>
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Expanded(
-                child: Text(
-                  widget.food.name,
-                  style: TextStyle(
-                    fontSize: 26,
-                    fontWeight: FontWeight.bold,
-                    color: textColor,
-                    height: 1.2,
-                  ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      widget.food.name,
+                      style: TextStyle(
+                        fontSize: 26,
+                        fontWeight: FontWeight.bold,
+                        color: textColor,
+                        height: 1.2,
+                      ),
+                    ),
+                    if (widget.food.restaurantName.isNotEmpty) ...[
+                      const SizedBox(height: 6),
+                      GestureDetector(
+                        behavior: HitTestBehavior.opaque,
+                        onTap: () {
+                          Haptics.light();
+                          if (widget.food.restaurantId.isNotEmpty) {
+                            context.push('${RouteNames.restaurantDetail}/${widget.food.restaurantId}');
+                          }
+                        },
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(Icons.storefront_rounded, size: 16, color: AppColors.primary),
+                            const SizedBox(width: 4),
+                            Flexible(
+                              child: Text(
+                                widget.food.restaurantName,
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  color: AppColors.primary,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ),
+                            Icon(Icons.chevron_right_rounded, size: 18, color: AppColors.primary),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ],
                 ),
               ),
               const SizedBox(width: 16),
@@ -896,11 +931,12 @@ class _FoodDetailScreenState extends ConsumerState<FoodDetailScreen>
     final variantDelta = _selectedVariant == null
         ? 0.0
         : _selectedVariant!.price - widget.food.price;
+    final bottomInset = MediaQuery.of(context).padding.bottom;
     return Container(
-      padding: const EdgeInsets.fromLTRB(24, 16, 24, 32),
+      padding: EdgeInsets.fromLTRB(16, 12, 16, bottomInset > 0 ? bottomInset + 8 : 20),
       decoration: BoxDecoration(
         color: isDark ? const Color(0xFF1B1B1B) : Colors.white,
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
         boxShadow: [
           BoxShadow(
             color: isDark
@@ -915,13 +951,14 @@ class _FoodDetailScreenState extends ConsumerState<FoodDetailScreen>
         children: [
           // Quantity Selector
           Container(
-            height: 56,
-            padding: const EdgeInsets.symmetric(horizontal: 4),
+            height: 50,
+            padding: const EdgeInsets.symmetric(horizontal: 2),
             decoration: BoxDecoration(
               color: isDark ? const Color(0xFF121212) : const Color(0xFFF5F6F8),
-              borderRadius: BorderRadius.circular(28),
+              borderRadius: BorderRadius.circular(25),
             ),
             child: Row(
+              mainAxisSize: MainAxisSize.min,
               children: [
                 _buildQuantityButton(Icons.remove, () {
                   Haptics.light();
@@ -930,7 +967,7 @@ class _FoodDetailScreenState extends ConsumerState<FoodDetailScreen>
                   }
                 }, isDark),
                 SizedBox(
-                  width: 32,
+                  width: 26,
                   child: Center(
                     child: AnimatedSwitcher(
                       duration: const Duration(milliseconds: 200),
@@ -945,7 +982,7 @@ class _FoodDetailScreenState extends ConsumerState<FoodDetailScreen>
                         '$_quantity',
                         key: ValueKey<int>(_quantity),
                         style: TextStyle(
-                          fontSize: 18,
+                          fontSize: 16,
                           fontWeight: FontWeight.bold,
                           color: isDark ? Colors.white : Colors.black,
                         ),
@@ -961,7 +998,7 @@ class _FoodDetailScreenState extends ConsumerState<FoodDetailScreen>
             ),
           ),
 
-          const SizedBox(width: 16),
+          const SizedBox(width: 12),
 
           // Add to Cart Button
           Expanded(
@@ -1027,31 +1064,40 @@ class _FoodDetailScreenState extends ConsumerState<FoodDetailScreen>
                       onAnimationComplete: addAll,
                     );
                   },
-                  borderRadius: BorderRadius.circular(28),
+                  borderRadius: BorderRadius.circular(25),
                   child: Ink(
-                    height: 56,
+                    height: 50,
                     decoration: BoxDecoration(
                       color: AppColors.primary,
-                      borderRadius: BorderRadius.circular(28),
+                      borderRadius: BorderRadius.circular(25),
                     ),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        const Icon(
-                          Icons.shopping_cart_outlined,
-                          color: Colors.white,
-                          size: 20,
-                        ),
-                        const SizedBox(width: 8),
-                        Text(
-                          'Add to Cart • ₹${(unitPrice * _quantity).toStringAsFixed(0)}',
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
+                    child: Center(
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 10),
+                        child: FittedBox(
+                          fit: BoxFit.scaleDown,
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Icon(
+                                Icons.shopping_cart_outlined,
+                                color: Colors.white,
+                                size: 19,
+                              ),
+                              const SizedBox(width: 6),
+                              Text(
+                                'Add to Cart • ₹${(unitPrice * _quantity).toStringAsFixed(0)}',
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 15,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ],
                           ),
                         ),
-                      ],
+                      ),
                     ),
                   ),
                 ),
@@ -1066,17 +1112,17 @@ class _FoodDetailScreenState extends ConsumerState<FoodDetailScreen>
   Widget _buildQuantityButton(IconData icon, VoidCallback onTap, bool isDark) {
     return InkWell(
       onTap: onTap,
-      borderRadius: BorderRadius.circular(24),
+      borderRadius: BorderRadius.circular(19),
       child: Container(
-        width: 48,
-        height: 48,
+        width: 38,
+        height: 38,
         decoration: const BoxDecoration(
           color: Colors.transparent,
           shape: BoxShape.circle,
         ),
         child: Icon(
           icon,
-          size: 20,
+          size: 18,
           color: isDark ? Colors.white : Colors.black,
         ),
       ),

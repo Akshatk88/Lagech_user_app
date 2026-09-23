@@ -169,7 +169,7 @@ class AccountRemoteDataSource {
   Future<bool> saveFcmToken(String token, {UserModel? user}) async {
     final url = '${ApiConfig.baseUrl}${ApiPaths.fcmSaveMobile}';
     final jwt = await _tokens.accessToken;
-    final bodyMap = {'token': token};
+    final bodyMap = {'token': token, 'platform': 'mobile'};
     final headersStr = 'Authorization: Bearer ${jwt ?? "NULL"}, Content-Type: application/json';
     final authHeaderStr = 'Bearer ${jwt ?? "NULL"}';
 

@@ -69,7 +69,7 @@ class RestaurantRepositoryImpl implements RestaurantRepository {
   }) => _guard(
     () => _remote.getPublicFoods(
       zoneId: _zoneId(),
-      limit: 1000,
+      limit: 5000,
       onCache: onCache,
     ),
   );
@@ -88,7 +88,7 @@ class RestaurantRepositoryImpl implements RestaurantRepository {
 
       final res = await _remote.getPublicFoods(
         zoneId: _zoneId(),
-        limit: 1000,
+        limit: 5000,
         categorySlug: categoryParam,
         categoryId: realCategoryId,
         categoryName: categoryParam,

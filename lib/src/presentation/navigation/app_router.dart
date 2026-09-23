@@ -33,6 +33,7 @@ import '../wallet/screens/pay_later_screen.dart';
 import '../chat/screens/chat_screen.dart';
 import '../home/screens/home_filter_screen.dart';
 import '../home/screens/category_details_screen.dart';
+import '../home/screens/popular_dishes_screen.dart';
 import '../common/webview_screen.dart';
 import '../about/screens/about_screen.dart';
 import '../profile/screens/help_support_screen.dart';
@@ -261,6 +262,11 @@ final routerProvider = Provider<GoRouter>((ref) {
           final category = state.extra as CategoryModel;
           return CategoryDetailsScreen(category: category);
         },
+      ),
+      GoRoute(
+        path: RouteNames.popularDishes,
+        parentNavigatorKey: rootNavigatorKey,
+        builder: (context, state) => const PopularDishesScreen(),
       ),
       GoRoute(
         path: '/orders/success/:id',

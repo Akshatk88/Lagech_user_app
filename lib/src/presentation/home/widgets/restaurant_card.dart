@@ -16,11 +16,7 @@ class RestaurantCard extends ConsumerStatefulWidget {
   final RestaurantModel restaurant;
   final int index;
 
-  const RestaurantCard({
-    super.key,
-    required this.restaurant,
-    this.index = 0,
-  });
+  const RestaurantCard({super.key, required this.restaurant, this.index = 0});
 
   @override
   ConsumerState<RestaurantCard> createState() => _RestaurantCardState();
@@ -134,30 +130,84 @@ class _RestaurantCardState extends ConsumerState<RestaurantCard> {
               ],
       ),
       clipBehavior: Clip.antiAlias,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      child: Stack(
+        clipBehavior: Clip.none,
+        alignment: Alignment.topCenter,
         children: [
-          _MediaCarousel(
-            restaurant: restaurant,
-            restaurantId: restaurant.id,
-            imageSlides: imageSlides,
-            isOpen: isOpen,
-            featuredPriceBadge: startingPrice > 0 ? '₹${startingPrice.toStringAsFixed(0)} for one' : null,
-            featuredDishName: restaurant.featuredDishName ?? featuredDish?.name,
-            topMenuItemNames: slideDishLabels.isNotEmpty ? slideDishLabels : displayTopItems,
-            onPageChanged: (page) {
-              _activePageNotifier.value = page;
-            },
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _MediaCarousel(
+                restaurant: restaurant,
+                restaurantId: restaurant.id,
+                imageSlides: imageSlides,
+                isOpen: isOpen,
+                featuredPriceBadge: startingPrice > 0
+                    ? 'From ₹${startingPrice.toStringAsFixed(2)}'
+                    : null,
+                featuredDishName:
+                    restaurant.featuredDishName ?? featuredDish?.name,
+                topMenuItemNames: slideDishLabels.isNotEmpty
+                    ? slideDishLabels
+                    : displayTopItems,
+                onPageChanged: (page) {
+                  _activePageNotifier.value = page;
+                },
+              ),
+              Padding(
+                padding: EdgeInsets.fromLTRB(14.w, 42.h, 14.w, 16.h),
+                child: _RestaurantInfo(
+                  restaurant: restaurant,
+                  isDark: isDark,
+                  startingPrice: startingPrice,
+                  slidePrices: slidePrices,
+                  activePageNotifier: _activePageNotifier,
+                  topMenuItemNames: displayTopItems,
+                ),
+              ),
+            ],
           ),
-          Padding(
-            padding: EdgeInsets.fromLTRB(14.w, 8.h, 14.w, 8.h),
-            child: _RestaurantInfo(
-              restaurant: restaurant,
-              isDark: isDark,
-              startingPrice: startingPrice,
-              slidePrices: slidePrices,
-              activePageNotifier: _activePageNotifier,
-              topMenuItemNames: displayTopItems,
+          // Logo overlapping banner
+          Positioned(
+            top: 220.h - 38.r, // Half the logo height
+            child: Container(
+              width: 76.r,
+              height: 76.r,
+              padding: EdgeInsets.all(4.r), // For the white border effect
+              decoration: BoxDecoration(
+                color: isDark ? AppColors.surfaceDark : Colors.white,
+                borderRadius: BorderRadius.circular(16.r),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.15),
+                    blurRadius: 8,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
+              ),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(13.r),
+                child: restaurant.imageUrl.isNotEmpty
+                    ? SmartImage(
+                        url: restaurant.imageUrl,
+                        category: ImageCategory.restaurant,
+                        fit: BoxFit.cover,
+                      )
+                    : (restaurant.coverImages.isNotEmpty
+                          ? SmartImage(
+                              url: restaurant.coverImages.first,
+                              category: ImageCategory.restaurant,
+                              fit: BoxFit.cover,
+                            )
+                          : Container(
+                              color: AppColors.primaryTint,
+                              child: Icon(
+                                Icons.storefront_rounded,
+                                size: 28.sp,
+                                color: AppColors.primary,
+                              ),
+                            )),
+              ),
             ),
           ),
         ],
@@ -165,29 +215,41 @@ class _RestaurantCardState extends ConsumerState<RestaurantCard> {
     );
 
     if (!isOpen) {
-      cardWidget = IgnorePointer(
-        ignoring: true,
-        child: ColorFiltered(
-          colorFilter: const ColorFilter.matrix(<double>[
-            0.2126, 0.7152, 0.0722, 0, 0,
-            0.2126, 0.7152, 0.0722, 0, 0,
-            0.2126, 0.7152, 0.0722, 0, 0,
-            0,      0,      0,      1, 0,
-          ]),
-          child: cardWidget,
-        ),
+      cardWidget = ColorFiltered(
+        colorFilter: const ColorFilter.matrix(<double>[
+          0.2126,
+          0.7152,
+          0.0722,
+          0,
+          0,
+          0.2126,
+          0.7152,
+          0.0722,
+          0,
+          0,
+          0.2126,
+          0.7152,
+          0.0722,
+          0,
+          0,
+          0,
+          0,
+          0,
+          1,
+          0,
+        ]),
+        child: cardWidget,
       );
     }
 
     return _EntranceAnimationWrapper(
       index: widget.index,
       child: GestureDetector(
-        onTap: isOpen
-            ? () {
-                Haptics.light();
-                context.push(RouteNames.restaurantDetail, extra: restaurant);
-              }
-            : null,
+        behavior: HitTestBehavior.opaque,
+        onTap: () {
+          Haptics.light();
+          context.push(RouteNames.restaurantDetail, extra: restaurant);
+        },
         child: cardWidget,
       ),
     );
@@ -198,13 +260,11 @@ class _EntranceAnimationWrapper extends StatefulWidget {
   final int index;
   final Widget child;
 
-  const _EntranceAnimationWrapper({
-    required this.index,
-    required this.child,
-  });
+  const _EntranceAnimationWrapper({required this.index, required this.child});
 
   @override
-  State<_EntranceAnimationWrapper> createState() => _EntranceAnimationWrapperState();
+  State<_EntranceAnimationWrapper> createState() =>
+      _EntranceAnimationWrapperState();
 }
 
 class _EntranceAnimationWrapperState extends State<_EntranceAnimationWrapper>
@@ -228,8 +288,14 @@ class _EntranceAnimationWrapperState extends State<_EntranceAnimationWrapper>
       curve: Curves.easeOutCubic,
     );
 
-    _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(curvedAnimation);
-    _scaleAnimation = Tween<double>(begin: 0.97, end: 1.0).animate(curvedAnimation);
+    _fadeAnimation = Tween<double>(
+      begin: 0.0,
+      end: 1.0,
+    ).animate(curvedAnimation);
+    _scaleAnimation = Tween<double>(
+      begin: 0.97,
+      end: 1.0,
+    ).animate(curvedAnimation);
     _slideAnimation = Tween<Offset>(
       begin: const Offset(0.0, 0.25),
       end: Offset.zero,
@@ -260,16 +326,11 @@ class _EntranceAnimationWrapperState extends State<_EntranceAnimationWrapper>
       opacity: _fadeAnimation,
       child: SlideTransition(
         position: _slideAnimation,
-        child: ScaleTransition(
-          scale: _scaleAnimation,
-          child: widget.child,
-        ),
+        child: ScaleTransition(scale: _scaleAnimation, child: widget.child),
       ),
     );
   }
 }
-
-
 
 class _RestaurantInfo extends ConsumerWidget {
   final RestaurantModel restaurant;
@@ -297,8 +358,8 @@ class _RestaurantInfo extends ConsumerWidget {
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
-        Icon(icon, size: 12.sp, color: color),
-        SizedBox(width: 3.w),
+        Icon(icon, size: 14.sp, color: color),
+        SizedBox(width: 4.w),
         Flexible(
           child: Text(
             label,
@@ -306,7 +367,7 @@ class _RestaurantInfo extends ConsumerWidget {
             overflow: TextOverflow.ellipsis,
             style: TextStyle(
               color: color,
-              fontSize: 11.5.sp,
+              fontSize: 13.sp,
               fontWeight: FontWeight.bold,
             ),
           ),
@@ -318,8 +379,9 @@ class _RestaurantInfo extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final titleColor = isDark ? Colors.white : const Color(0xFF0F172A);
-    final secondaryColor =
-        isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B);
+    final secondaryColor = isDark
+        ? const Color(0xFF94A3B8)
+        : const Color(0xFF64748B);
 
     final locationLabel = restaurant.area;
 
@@ -328,41 +390,47 @@ class _RestaurantInfo extends ConsumerWidget {
 
     if (restaurant.distanceKm > 0) {
       if (infoSpans.isNotEmpty) {
-        infoSpans.add(TextSpan(
-          text: '   •   ',
-          style: TextStyle(color: secondaryColor.withValues(alpha: 0.5)),
-        ));
+        infoSpans.add(
+          TextSpan(
+            text: '   •   ',
+            style: TextStyle(color: secondaryColor.withValues(alpha: 0.5)),
+          ),
+        );
       }
-      infoSpans.add(TextSpan(
-        text: '${restaurant.distanceKm.toStringAsFixed(1)} km',
-        style: TextStyle(
-          color: secondaryColor,
-          fontWeight: FontWeight.w600,
-          fontSize: 12.sp,
+      infoSpans.add(
+        TextSpan(
+          text: '${restaurant.distanceKm.toStringAsFixed(1)} km',
+          style: TextStyle(
+            color: secondaryColor,
+            fontWeight: FontWeight.w600,
+            fontSize: 14.sp,
+          ),
         ),
-      ));
+      );
     }
 
     final priceWidget = (slidePrices.isNotEmpty || startingPrice > 0)
         ? ValueListenableBuilder<int>(
             valueListenable: activePageNotifier ?? ValueNotifier<int>(0),
             builder: (context, currentPage, _) {
-              final activePrice = (slidePrices.isNotEmpty &&
+              final activePrice =
+                  (slidePrices.isNotEmpty &&
                       currentPage < slidePrices.length &&
                       slidePrices[currentPage] > 0)
                   ? slidePrices[currentPage]
                   : (slidePrices.isNotEmpty &&
-                          (currentPage % slidePrices.length) < slidePrices.length &&
-                          slidePrices[currentPage % slidePrices.length] > 0
-                      ? slidePrices[currentPage % slidePrices.length]
-                      : startingPrice);
+                            (currentPage % slidePrices.length) <
+                                slidePrices.length &&
+                            slidePrices[currentPage % slidePrices.length] > 0
+                        ? slidePrices[currentPage % slidePrices.length]
+                        : startingPrice);
               if (activePrice <= 0) return const SizedBox.shrink();
               return Text(
                 '₹${activePrice.toStringAsFixed(0)} for one',
                 style: TextStyle(
                   color: secondaryColor,
                   fontWeight: FontWeight.w600,
-                  fontSize: 12.sp,
+                  fontSize: 14.sp,
                 ),
               );
             },
@@ -371,28 +439,33 @@ class _RestaurantInfo extends ConsumerWidget {
 
     if (priceWidget != null) {
       if (infoSpans.isNotEmpty) {
-        infoSpans.add(TextSpan(
-          text: '   •   ',
-          style: TextStyle(color: secondaryColor.withValues(alpha: 0.5)),
-        ));
+        infoSpans.add(
+          TextSpan(
+            text: '   •   ',
+            style: TextStyle(color: secondaryColor.withValues(alpha: 0.5)),
+          ),
+        );
       }
-      infoSpans.add(WidgetSpan(
-        alignment: PlaceholderAlignment.baseline,
-        baseline: TextBaseline.alphabetic,
-        child: priceWidget,
-      ));
+      infoSpans.add(
+        WidgetSpan(
+          alignment: PlaceholderAlignment.baseline,
+          baseline: TextBaseline.alphabetic,
+          child: priceWidget,
+        ),
+      );
     }
 
     final cuisinesText = restaurant.tags.isNotEmpty
-        ? restaurant.tags.join('  •  ')
+        ? restaurant.tags.join(', ')
         : (restaurant.restaurantTags.isNotEmpty
-            ? restaurant.restaurantTags.join('  •  ')
-            : 'Desserts  •  North Indian  •  Snacks');
+              ? restaurant.restaurantTags.join(', ')
+              : 'Desserts, North Indian, Snacks');
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // 1. Restaurant Name Header Row with Green Rating Pill (Top-Right)
+        // 1. Restaurant Name & Rating / New badge (matches reference design:
+        // shows a star rating pill when rated, otherwise a green "New" pill)
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           crossAxisAlignment: CrossAxisAlignment.center,
@@ -401,7 +474,7 @@ class _RestaurantInfo extends ConsumerWidget {
               child: Text(
                 restaurant.name,
                 style: TextStyle(
-                  fontSize: 19.sp,
+                  fontSize: 20.sp,
                   fontWeight: FontWeight.w800,
                   color: titleColor,
                   letterSpacing: -0.2,
@@ -410,108 +483,67 @@ class _RestaurantInfo extends ConsumerWidget {
                 overflow: TextOverflow.ellipsis,
               ),
             ),
-            if (restaurant.rating > 0)
-              Container(
-                padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 4.h),
-                decoration: BoxDecoration(
-                  color: const Color(0xFF22C55E),
-                  borderRadius: BorderRadius.circular(8.r),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(
-                      Icons.star_rounded,
-                      color: Colors.white,
-                      size: 13.sp,
-                    ),
-                    SizedBox(width: 3.w),
-                    Text(
-                      restaurant.rating.toStringAsFixed(1),
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 12.sp,
-                      ),
-                    ),
-                  ],
-                ),
+            SizedBox(width: 8.w),
+            Container(
+              padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 4.h),
+              decoration: BoxDecoration(
+                color: AppColors.primary,
+                borderRadius: BorderRadius.circular(8.r),
               ),
-          ],
-        ),
-
-        SizedBox(height: 3.h),
-
-        // 2. Delivery Time / Cost Line & Right-Side Inline Location / Status
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: [
-            Expanded(
-              child: RichText(
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                text: TextSpan(children: infoSpans),
-              ),
+              child: restaurant.rating > 0
+                  ? Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          Icons.star_rounded,
+                          color: Colors.white,
+                          size: 14.sp,
+                        ),
+                        SizedBox(width: 4.w),
+                        Text(
+                          restaurant.rating.toStringAsFixed(1),
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 13.sp,
+                          ),
+                        ),
+                      ],
+                    )
+                  : Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          Icons.star_rounded,
+                          color: Colors.white,
+                          size: 14.sp,
+                        ),
+                        SizedBox(width: 3.w),
+                        Text(
+                          'New',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 13.sp,
+                          ),
+                        ),
+                      ],
+                    ),
             ),
-            if (locationLabel.isNotEmpty)
-              Flexible(
-                child: _buildInlineItem(
-                  icon: Icons.location_on_rounded,
-                  label: locationLabel,
-                  color: AppColors.primaryDeep,
-                ),
-              )
-            else if (!restaurant.isOpen)
-              Container(
-                padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 4.h),
-                decoration: BoxDecoration(
-                  color: isDark
-                      ? const Color(0xFF3F1D24)
-                      : const Color(0xFFFFF1F2),
-                  borderRadius: BorderRadius.circular(16.r),
-                  border: Border.all(
-                    color: isDark
-                        ? const Color(0xFF881337)
-                        : const Color(0xFFFECDD3),
-                    width: 1.0,
-                  ),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(
-                      Icons.access_time_rounded,
-                      size: 12.sp,
-                      color: const Color(0xFFE11D48),
-                    ),
-                    SizedBox(width: 4.w),
-                    Text(
-                      'Unavailable Delivery',
-                      style: TextStyle(
-                        color: const Color(0xFFE11D48),
-                        fontSize: 11.sp,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
           ],
         ),
 
-        SizedBox(height: 3.h),
+        SizedBox(height: 6.h),
 
-        // 3. Cuisines Line & Right-Aligned Inline Pure Veg Badge directly below Location
+        // 2. Cuisines and Location (and Pure Veg Badge)
         Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
             Expanded(
               child: Text(
-                cuisinesText,
+                '$cuisinesText • ${restaurant.distanceKm > 0 ? '${restaurant.distanceKm.toStringAsFixed(1)} km' : locationLabel}',
                 style: TextStyle(
-                  fontSize: 11.5.sp,
+                  fontSize: 13.sp,
                   color: secondaryColor,
                   fontWeight: FontWeight.w500,
                 ),
@@ -530,7 +562,21 @@ class _RestaurantInfo extends ConsumerWidget {
           ],
         ),
 
-        // 4. Temporary Closed Banner (Matching Screenshot)
+        if (restaurant.deliveryTime.isNotEmpty) ...[
+          SizedBox(height: 4.h),
+          Text(
+            restaurant.deliveryTime,
+            style: TextStyle(
+              fontSize: 13.sp,
+              color: secondaryColor,
+              fontWeight: FontWeight.w500,
+            ),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+        ],
+
+        // 3. Temporary Closed Banner (Matching Screenshot)
         if (!restaurant.isOpen) ...[
           SizedBox(height: 6.h),
           Container(
@@ -540,7 +586,9 @@ class _RestaurantInfo extends ConsumerWidget {
               color: isDark ? AppColors.primaryTintDark : AppColors.primaryTint,
               borderRadius: BorderRadius.circular(12.r),
               border: Border.all(
-                color: isDark ? AppColors.primaryTintDarkStrong : AppColors.primarySoft,
+                color: isDark
+                    ? AppColors.primaryTintDarkStrong
+                    : AppColors.primarySoft,
                 width: 1.0,
               ),
             ),
@@ -579,7 +627,9 @@ class _RestaurantInfo extends ConsumerWidget {
                           fontWeight: FontWeight.w500,
                           color: isDark
                               ? AppColors.primarySoft
-                              : AppColors.primaryDeepText.withValues(alpha: 0.85),
+                              : AppColors.primaryDeepText.withValues(
+                                  alpha: 0.85,
+                                ),
                         ),
                       ),
                     ],
@@ -591,14 +641,13 @@ class _RestaurantInfo extends ConsumerWidget {
         ],
 
         // 5. Must Try / Popular Dish Banner Row
-        if (topMenuItemNames.isNotEmpty || restaurant.featuredDishName != null) ...[
+        if (topMenuItemNames.isNotEmpty ||
+            restaurant.featuredDishName != null) ...[
           SizedBox(height: 5.h),
           Container(
             padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 4.h),
             decoration: BoxDecoration(
-              color: isDark
-                  ? AppColors.primaryTintDark
-                  : AppColors.primaryTint,
+              color: isDark ? AppColors.primaryTintDark : AppColors.primaryTint,
               borderRadius: BorderRadius.circular(12.r),
               border: Border.all(
                 color: isDark
@@ -622,18 +671,18 @@ class _RestaurantInfo extends ConsumerWidget {
                         ? topMenuItemNames
                         : [
                             if (restaurant.featuredDishName != null)
-                              '${restaurant.featuredDishName}${startingPrice > 0 ? ' • ₹${startingPrice.toStringAsFixed(0)}' : ''}'
+                              '${restaurant.featuredDishName}${startingPrice > 0 ? ' • ₹${startingPrice.toStringAsFixed(0)}' : ''}',
                           ],
                     prefix: Text(
                       'Must Try • ',
                       style: TextStyle(
-                        fontSize: 11.sp,
+                        fontSize: 12.5.sp,
                         fontWeight: FontWeight.bold,
                         color: AppColors.primaryDeep,
                       ),
                     ),
                     style: TextStyle(
-                      fontSize: 11.5.sp,
+                      fontSize: 13.sp,
                       fontWeight: FontWeight.w600,
                       color: titleColor,
                     ),
@@ -642,8 +691,10 @@ class _RestaurantInfo extends ConsumerWidget {
                 SizedBox(width: 6.w),
                 if (!restaurant.isOpen)
                   Container(
-                    padding:
-                        EdgeInsets.symmetric(horizontal: 10.w, vertical: 5.h),
+                    padding: EdgeInsets.symmetric(
+                      horizontal: 10.w,
+                      vertical: 5.h,
+                    ),
                     decoration: BoxDecoration(
                       color: isDark
                           ? const Color(0xFF334155)
@@ -665,18 +716,22 @@ class _RestaurantInfo extends ConsumerWidget {
                   InkWell(
                     onTap: () {
                       Haptics.medium();
-                      context.push(RouteNames.restaurantDetail,
-                          extra: restaurant);
+                      context.push(
+                        RouteNames.restaurantDetail,
+                        extra: restaurant,
+                      );
                     },
                     borderRadius: BorderRadius.circular(8.r),
                     child: Container(
-                      padding:
-                          EdgeInsets.symmetric(horizontal: 10.w, vertical: 4.h),
+                      padding: EdgeInsets.symmetric(
+                        horizontal: 10.w,
+                        vertical: 4.h,
+                      ),
                       decoration: BoxDecoration(
                         color: Colors.white,
                         borderRadius: BorderRadius.circular(8.r),
                         border: Border.all(
-                          color: AppColors.primarySoft,
+                          color: AppColors.primary.withValues(alpha: 0.5),
                           width: 0.8,
                         ),
                         boxShadow: [
@@ -692,16 +747,16 @@ class _RestaurantInfo extends ConsumerWidget {
                         children: [
                           Icon(
                             Icons.add_rounded,
-                            size: 14.sp,
-                            color: AppColors.primaryDeep,
+                            size: 16.sp,
+                            color: AppColors.primary,
                           ),
-                          SizedBox(width: 2.w),
+                          SizedBox(width: 4.w),
                           Text(
                             'Add',
                             style: TextStyle(
-                              fontSize: 10.5.sp,
+                              fontSize: 12.sp,
                               fontWeight: FontWeight.bold,
-                              color: AppColors.primaryDeep,
+                              color: AppColors.primary,
                             ),
                           ),
                         ],
@@ -742,7 +797,8 @@ class _MediaCarousel extends ConsumerStatefulWidget {
   ConsumerState<_MediaCarousel> createState() => _MediaCarouselState();
 }
 
-class _MediaCarouselState extends ConsumerState<_MediaCarousel> with SingleTickerProviderStateMixin {
+class _MediaCarouselState extends ConsumerState<_MediaCarousel>
+    with SingleTickerProviderStateMixin {
   late final PageController _pageController;
   Timer? _timer;
   Timer? _inactivityTimer;
@@ -763,13 +819,17 @@ class _MediaCarouselState extends ConsumerState<_MediaCarousel> with SingleTicke
       vsync: this,
       duration: const Duration(milliseconds: 300),
     );
-    _heartScaleAnimation = TweenSequence<double>([
-      TweenSequenceItem(tween: Tween(begin: 1.0, end: 1.35), weight: 40),
-      TweenSequenceItem(tween: Tween(begin: 1.35, end: 0.9), weight: 30),
-      TweenSequenceItem(tween: Tween(begin: 0.9, end: 1.0), weight: 30),
-    ]).animate(
-      CurvedAnimation(parent: _heartBumpController, curve: Curves.easeOutCubic),
-    );
+    _heartScaleAnimation =
+        TweenSequence<double>([
+          TweenSequenceItem(tween: Tween(begin: 1.0, end: 1.35), weight: 40),
+          TweenSequenceItem(tween: Tween(begin: 1.35, end: 0.9), weight: 30),
+          TweenSequenceItem(tween: Tween(begin: 0.9, end: 1.0), weight: 30),
+        ]).animate(
+          CurvedAnimation(
+            parent: _heartBumpController,
+            curve: Curves.easeOutCubic,
+          ),
+        );
 
     if (_slideCount > 1 && widget.isOpen) {
       _startAutoSlideTimer();
@@ -795,10 +855,15 @@ class _MediaCarouselState extends ConsumerState<_MediaCarousel> with SingleTicke
 
   void _startAutoSlideTimer() {
     _timer?.cancel();
-    if (_slideCount <= 1 || !mounted || _isUserInteracting || !widget.isOpen) return;
+    if (_slideCount <= 1 || !mounted || _isUserInteracting || !widget.isOpen) {
+      return;
+    }
 
     _timer = Timer.periodic(const Duration(milliseconds: 2800), (timer) {
-      if (!mounted || _slideCount <= 1 || _isUserInteracting || !widget.isOpen) {
+      if (!mounted ||
+          _slideCount <= 1 ||
+          _isUserInteracting ||
+          !widget.isOpen) {
         timer.cancel();
         return;
       }
@@ -842,23 +907,28 @@ class _MediaCarouselState extends ConsumerState<_MediaCarousel> with SingleTicke
   void _handleFavoriteTap() {
     Haptics.medium();
     _heartBumpController.forward(from: 0.0);
-    ref.read(favoritesViewModelProvider.notifier).toggle(widget.restaurantId, widget.restaurant);
+    ref
+        .read(favoritesViewModelProvider.notifier)
+        .toggle(widget.restaurantId, widget.restaurant);
   }
 
   @override
   Widget build(BuildContext context) {
     final isFavorite = ref.watch(
-      favoritesViewModelProvider.select((state) => state.value?.restaurantIds.contains(widget.restaurantId) ?? false),
+      favoritesViewModelProvider.select(
+        (state) =>
+            state.value?.restaurantIds.contains(widget.restaurantId) ?? false,
+      ),
     );
 
     final currentDishLabel = widget.topMenuItemNames.isNotEmpty
         ? widget.topMenuItemNames[_currentPage % widget.topMenuItemNames.length]
         : (widget.featuredDishName != null
-            ? '${widget.featuredDishName}${widget.featuredPriceBadge != null ? " • ${widget.featuredPriceBadge}" : ""}'
-            : widget.featuredPriceBadge);
+              ? '${widget.featuredDishName}${widget.featuredPriceBadge != null ? " • ${widget.featuredPriceBadge}" : ""}'
+              : widget.featuredPriceBadge);
 
     return SizedBox(
-      height: 175.h,
+      height: 220.h,
       child: Stack(
         children: [
           // 1. Cover / Food Image Slides Carousel (Grayscale desaturation when closed)
@@ -920,8 +990,10 @@ class _MediaCarouselState extends ConsumerState<_MediaCarousel> with SingleTicke
                 color: Colors.black.withValues(alpha: 0.35),
                 child: Center(
                   child: Container(
-                    padding:
-                        EdgeInsets.symmetric(horizontal: 18.w, vertical: 10.h),
+                    padding: EdgeInsets.symmetric(
+                      horizontal: 18.w,
+                      vertical: 10.h,
+                    ),
                     decoration: BoxDecoration(
                       color: const Color(0xDC18181B),
                       borderRadius: BorderRadius.circular(22.r),
@@ -1007,17 +1079,17 @@ class _MediaCarouselState extends ConsumerState<_MediaCarousel> with SingleTicke
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       Icon(
-                        Icons.local_fire_department_rounded,
+                        Icons.check_box_outline_blank_rounded,
                         size: 13.sp,
-                        color: AppColors.primary,
+                        color: Colors.white,
                       ),
-                      SizedBox(width: 4.w),
+                      SizedBox(width: 6.w),
                       Flexible(
                         child: Text(
                           currentDishLabel,
                           style: TextStyle(
                             color: Colors.white,
-                            fontSize: 10.5.sp,
+                            fontSize: 12.5.sp,
                             fontWeight: FontWeight.w600,
                           ),
                           maxLines: 1,
@@ -1030,15 +1102,41 @@ class _MediaCarouselState extends ConsumerState<_MediaCarousel> with SingleTicke
               ),
             ),
 
-          // 5. Bookmark / Favorite Button (Top-Right)
+          // Delivery Time Badge (Bottom-Left)
+          if (widget.restaurant != null &&
+              widget.restaurant!.deliveryTime.isNotEmpty)
+            Positioned(
+              bottom: 12.h,
+              left: 12.w,
+              child: Container(
+                padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 5.h),
+                decoration: BoxDecoration(
+                  color: Colors.black.withValues(alpha: 0.68),
+                  borderRadius: BorderRadius.circular(16.r),
+                ),
+                child: Text(
+                  widget.restaurant!.deliveryTime,
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 12.5.sp,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+            ),
+
+          // 5. Bookmark / Favorite Button (Top-Right) — white circle with
+          // outline bookmark, filled + red (AppColors.primary) when saved,
+          // matching the red & white brand theme.
           Positioned(
             top: 12.h,
             right: 12.w,
             child: GestureDetector(
+              behavior: HitTestBehavior.opaque,
               onTap: _handleFavoriteTap,
               child: Container(
-                width: 32.w,
-                height: 32.h,
+                width: 36.w,
+                height: 36.w,
                 decoration: BoxDecoration(
                   color: Colors.white,
                   shape: BoxShape.circle,
@@ -1050,49 +1148,21 @@ class _MediaCarouselState extends ConsumerState<_MediaCarousel> with SingleTicke
                     ),
                   ],
                 ),
+                alignment: Alignment.center,
                 child: ScaleTransition(
                   scale: _heartScaleAnimation,
                   child: Icon(
-                    isFavorite ? Icons.favorite_rounded : Icons.favorite_border_rounded,
-                    size: 17.sp,
-                    color: isFavorite ? const Color(0xFFFF4B72) : Colors.black54,
+                    isFavorite
+                        ? Icons.bookmark_rounded
+                        : Icons.bookmark_border_rounded,
+                    size: 21.sp,
+                    color: isFavorite ? AppColors.primary : Colors.black54,
                   ),
                 ),
               ),
             ),
           ),
-
-          // 6. Carousel Dot Indicators (Matching Screenshot)
-          if (_slideCount > 1)
-            Positioned(
-              bottom: 10.h,
-              right: 12.w,
-              child: Container(
-                padding: EdgeInsets.symmetric(horizontal: 6.w, vertical: 4.h),
-                decoration: BoxDecoration(
-                  color: Colors.black.withValues(alpha: 0.65),
-                  borderRadius: BorderRadius.circular(12.r),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: List.generate(_slideCount, (i) => _dot(i == _currentPage)),
-                ),
-              ),
-            ),
         ],
-      ),
-    );
-  }
-
-  Widget _dot(bool active) {
-    return AnimatedContainer(
-      duration: const Duration(milliseconds: 250),
-      margin: EdgeInsets.only(left: 4.w),
-      width: active ? 14.w : 5.w,
-      height: 5.h,
-      decoration: BoxDecoration(
-        color: active ? Colors.white : Colors.white.withValues(alpha: 0.5),
-        borderRadius: BorderRadius.circular(3.r),
       ),
     );
   }
@@ -1172,10 +1242,7 @@ class _PageUpTextTickerState extends State<PageUpTextTicker> {
       layoutBuilder: (Widget? currentChild, List<Widget> previousChildren) {
         return Stack(
           alignment: Alignment.centerLeft,
-          children: <Widget>[
-            ...previousChildren,
-            ?currentChild,
-          ],
+          children: <Widget>[...previousChildren, ?currentChild],
         );
       },
       transitionBuilder: (Widget child, Animation<double> animation) {
@@ -1194,20 +1261,14 @@ class _PageUpTextTickerState extends State<PageUpTextTicker> {
 
         return SlideTransition(
           position: isIncoming ? inAnimation : outAnimation,
-          child: FadeTransition(
-            opacity: animation,
-            child: child,
-          ),
+          child: FadeTransition(opacity: animation, child: child),
         );
       },
       child: Row(
         key: ValueKey<int>(_currentIndex),
         mainAxisSize: MainAxisSize.min,
         children: [
-          if (widget.prefix != null) ...[
-            widget.prefix!,
-            SizedBox(width: 4.w),
-          ],
+          if (widget.prefix != null) ...[widget.prefix!, SizedBox(width: 4.w)],
           Flexible(
             child: Text(
               currentText,

@@ -13,6 +13,8 @@ class RestaurantState {
   final bool isVegOnly;
   final bool isNonVegOnly;
   final bool isMinRating4;
+  final bool isBestSellerOnly;
+  final bool isRatingSort;
   final bool isLoading;
   final String? errorMessage;
 
@@ -26,6 +28,8 @@ class RestaurantState {
     this.isVegOnly = false,
     this.isNonVegOnly = false,
     this.isMinRating4 = false,
+    this.isBestSellerOnly = false,
+    this.isRatingSort = false,
     this.isLoading = false,
     this.errorMessage,
   });
@@ -40,6 +44,8 @@ class RestaurantState {
     bool? isVegOnly,
     bool? isNonVegOnly,
     bool? isMinRating4,
+    bool? isBestSellerOnly,
+    bool? isRatingSort,
     bool? isLoading,
     String? errorMessage,
   }) {
@@ -53,6 +59,8 @@ class RestaurantState {
       isVegOnly: isVegOnly ?? this.isVegOnly,
       isNonVegOnly: isNonVegOnly ?? this.isNonVegOnly,
       isMinRating4: isMinRating4 ?? this.isMinRating4,
+      isBestSellerOnly: isBestSellerOnly ?? this.isBestSellerOnly,
+      isRatingSort: isRatingSort ?? this.isRatingSort,
       isLoading: isLoading ?? this.isLoading,
       errorMessage: errorMessage,
     );

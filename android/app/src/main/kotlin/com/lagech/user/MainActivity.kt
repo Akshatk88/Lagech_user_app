@@ -1,4 +1,4 @@
-package com.appzeto.food
+package com.lagech.user
 
 import io.flutter.embedding.android.FlutterActivity
 

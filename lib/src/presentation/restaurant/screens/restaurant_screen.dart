@@ -1,5 +1,4 @@
 import 'dart:developer' as developer;
-import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -57,7 +56,10 @@ class _RestaurantScreenState extends ConsumerState<RestaurantScreen> {
   bool _isAutoScrolling = false;
   List<String> _lastSectionOrder = [];
 
-  double get _categoryBarHeight => 56.h;
+  // ---- Collapsed categories ----
+  final Set<String> _collapsedCategories = {};
+
+  double get _categoryBarHeight => 38.h;
 
   @override
   void initState() {
@@ -251,7 +253,7 @@ class _RestaurantScreenState extends ConsumerState<RestaurantScreen> {
                           parent: BouncingScrollPhysics(),
                         ),
                         slivers: [
-                          // Sticky Premium Search Bar
+                          // Sticky Search Bar + Filter Chips
                           SliverPersistentHeader(
                             pinned: true,
                             delegate: _StickySearchBarDelegate(
@@ -289,12 +291,9 @@ class _RestaurantScreenState extends ConsumerState<RestaurantScreen> {
                                   )
                                 : Column(
                                     children: [
-                                      SizedBox(height: 12.h),
+                                      SizedBox(height: 4.h),
                                       if (currentRestaurant.id.isNotEmpty)
                                         _buildPreviousOrdersSection(context, currentRestaurant.id),
-                                      // Segmented Filter (All | Veg | Non-Veg)
-                                      _buildSegmentedFilter(context, restaurantState),
-                                      SizedBox(height: 20.h),
                                       // Dishes grouped into jump-to category sections
                                       _buildCategorySections(
                                         context,
@@ -335,318 +334,337 @@ class _RestaurantScreenState extends ConsumerState<RestaurantScreen> {
     );
   }
 
-  // ==================== TOP HEADER SECTION ====================
+  // ==================== TOP HEADER SECTION (HERO IMAGE) ====================
 
   Widget _buildTopSection(
     BuildContext context,
     RestaurantModel restaurant,
     bool isFavorite,
   ) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final statusBarHeight = MediaQuery.of(context).padding.top;
+    final heroHeight = 230.h + statusBarHeight;
 
-    return Container(
-      width: double.infinity,
-      decoration: BoxDecoration(
-        color: AppColors.primary,
-        borderRadius: BorderRadius.only(
-          bottomLeft: Radius.circular(36.r),
-          bottomRight: Radius.circular(36.r),
-        ),
-      ),
-      padding: EdgeInsets.only(
-        top: MediaQuery.of(context).padding.top + 8.h,
-        left: 16.w,
-        right: 16.w,
-        bottom: 8.h,
-      ),
-      child: Column(
+    // Pick best image: coverImages first, then imageUrl
+    final heroImageUrl = restaurant.coverImages.isNotEmpty
+        ? restaurant.coverImages.first
+        : restaurant.imageUrl;
+
+    return SizedBox(
+      height: heroHeight,
+      child: Stack(
+        fit: StackFit.expand,
         children: [
-          // App Bar Area
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              GestureDetector(
-                onTap: () {
-                  Haptics.light();
-                  if (context.canPop()) {
-                    context.pop();
-                  } else {
-                    context.go(RouteNames.home);
-                  }
-                },
-                child: Icon(Icons.arrow_back, color: Colors.white, size: 24.sp),
-              ),
-              Row(
-                children: [
-                  GestureDetector(
-                    onTap: () {
-                      Haptics.light();
-                      final text = DeepLinkService.generateRestaurantShareText(
-                        restaurantName: restaurant.name,
-                        restaurantId: restaurant.id,
-                        cuisines: restaurant.tags.join(', '),
-                      );
-                      SharePlus.instance.share(ShareParams(text: text));
-                    },
-                    child: Icon(
-                      Icons.share_outlined,
-                      color: Colors.white,
-                      size: 24.sp,
+          // ---- Hero Image ----
+          heroImageUrl.isNotEmpty
+              ? SmartImage(
+                  url: heroImageUrl,
+                  category: ImageCategory.restaurant,
+                  fit: BoxFit.cover,
+                )
+              : Container(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [
+                        AppColors.primary,
+                        AppColors.primary.withValues(alpha: 0.7),
+                      ],
                     ),
                   ),
-                  SizedBox(width: 18.w),
-                  GestureDetector(
-                    onTap: () {
-                      Haptics.medium();
-                      ref
-                          .read(favoritesViewModelProvider.notifier)
-                          .toggle(restaurant.id, restaurant);
-                    },
-                    child: Icon(
-                      isFavorite ? Icons.favorite : Icons.favorite_border,
-                      color: isFavorite
-                          ? const Color(0xFFFF4B72)
-                          : Colors.white,
-                      size: 24.sp,
-                    ),
-                  ),
+                ),
+
+          // ---- Gradient Overlay (bottom) ----
+          DecoratedBox(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                stops: const [0.0, 0.35, 1.0],
+                colors: [
+                  Colors.black.withValues(alpha: 0.45),
+                  Colors.transparent,
+                  Colors.black.withValues(alpha: 0.78),
                 ],
               ),
-            ],
-          ),
-          SizedBox(height: 12.h),
-
-          // Overlapping Card
-          Container(
-            padding: EdgeInsets.all(16.r),
-            decoration: BoxDecoration(
-              color: isDark ? AppColors.cardDark : Colors.white,
-              borderRadius: BorderRadius.circular(24.r),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: isDark ? 0.3 : 0.08),
-                  blurRadius: 15,
-                  offset: const Offset(0, 5),
-                ),
-              ],
             ),
+          ),
+
+          // ---- Content ----
+          Padding(
+            padding: EdgeInsets.fromLTRB(16.w, statusBarHeight + 8.h, 16.w, 0),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                if (restaurant.isFeatured) ...[
-                  Row(
-                    children: [
-                      Icon(
-                        Icons.star_rounded,
-                        color: AppColors.primary,
-                        size: 14.sp,
-                      ),
-                      SizedBox(width: 4.w),
-                      Text(
-                        'Featured',
-                        style: TextStyle(
-                          color: AppColors.primary,
-                          fontSize: 11.sp,
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                    ],
-                  ),
-                  SizedBox(height: 8.h),
-                ],
+                // Top row: Back + Share + Fav
                 Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            restaurant.name,
-                            style: TextStyle(
-                              fontSize: 18.sp,
-                              fontWeight: FontWeight.w800,
-                              color: isDark
-                                  ? Colors.white
-                                  : const Color(0xFF1E1E1E),
-                            ),
-                          ),
-                          SizedBox(height: 6.h),
-                          Text(
-                            // Distance is only shown once it is actually known.
-                            // The backend fills distanceKm in only when the
-                            // request carried the user's coordinates, so it
-                            // arrives as 0 whenever the restaurant was opened
-                            // from a screen that had none — and printing
-                            // "0.0 km" then reads as "you are at the door".
-                            [
-                              if (restaurant.deliveryTime.isNotEmpty) restaurant.deliveryTime,
-                              if (_resolvedDistanceKm(restaurant) case final km?)
-                                '${km.toStringAsFixed(1)} km',
-                            ].join('  |  '),
-                            style: TextStyle(
-                              fontSize: 12.sp,
-                              color: isDark
-                                  ? AppColors.textSecondaryDark
-                                  : Colors.grey[600],
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    if (restaurant.rating > 0)
-                      Column(
-                        children: [
-                          Container(
-                            padding: EdgeInsets.symmetric(
-                              horizontal: 6.w,
-                              vertical: 4.h,
-                            ),
-                            decoration: BoxDecoration(
-                              color: const Color(0xFF1FA855),
-                              borderRadius: BorderRadius.circular(8.r),
-                            ),
-                            child: Row(
-                              children: [
-                                Text(
-                                  restaurant.rating.toStringAsFixed(1),
-                                  style: TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 13.sp,
-                                    fontWeight: FontWeight.w800,
-                                  ),
-                                ),
-                                SizedBox(width: 2.w),
-                                Icon(
-                                  Icons.star,
-                                  color: Colors.white,
-                                  size: 12.sp,
-                                ),
-                              ],
-                            ),
-                          ),
-                          if (restaurant.reviewCount > 0) ...[
-                            SizedBox(height: 4.h),
-                            Text(
-                              '${restaurant.reviewCount} ratings',
-                              style: TextStyle(
-                                fontSize: 9.sp,
-                                color: isDark
-                                    ? AppColors.textSecondaryDark
-                                    : Colors.grey[600],
-                              ),
-                            ),
-                          ],
-                        ],
-                      ),
-                  ],
-                ),
-                SizedBox(height: 16.h),
-
-                if (!restaurant.isOpen) ...[
-                  Container(
-                    width: double.infinity,
-                    padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 8.h),
-                    decoration: BoxDecoration(
-                      color: isDark ? AppColors.primaryTintDark : AppColors.primaryTint,
-                      borderRadius: BorderRadius.circular(12.r),
-                      border: Border.all(
-                        color: isDark
-                            ? AppColors.primaryTintDarkStrong
-                            : AppColors.primaryTintStrong,
-                        width: 1.0,
-                      ),
-                    ),
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Padding(
-                          padding: EdgeInsets.only(top: 2.h),
-                          child: Icon(
-                            Icons.access_time_rounded,
-                            size: 16.sp,
-                            color: AppColors.primaryDeep,
-                          ),
+                    // Back button
+                    GestureDetector(
+                      onTap: () {
+                        Haptics.light();
+                        if (context.canPop()) {
+                          context.pop();
+                        } else {
+                          context.go(RouteNames.home);
+                        }
+                      },
+                      child: Container(
+                        width: 36.r,
+                        height: 36.r,
+                        decoration: BoxDecoration(
+                          color: Colors.black.withValues(alpha: 0.35),
+                          shape: BoxShape.circle,
                         ),
-                        SizedBox(width: 8.w),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Text(
-                                'Delivery is currently unavailable.',
-                                style: TextStyle(
-                                  fontSize: 12.sp,
-                                  fontWeight: FontWeight.bold,
-                                  color: isDark
-                                      ? AppColors.primarySoft
-                                      : AppColors.primaryDeepText,
-                                ),
-                              ),
-                              SizedBox(height: 2.h),
-                              Text(
-                                'It will accept orders once it reopens.',
-                                style: TextStyle(
-                                  fontSize: 11.sp,
-                                  fontWeight: FontWeight.w500,
-                                  color: isDark
-                                      ? AppColors.primarySoft
-                                      : AppColors.primaryDeepText.withValues(alpha: 0.85),
-                                ),
-                              ),
-                            ],
+                        child: Icon(
+                          Icons.arrow_back_ios_new_rounded,
+                          color: Colors.white,
+                          size: 18.sp,
+                        ),
+                      ),
+                    ),
+                    // Share + Fav buttons
+                    Row(
+                      children: [
+                        GestureDetector(
+                          onTap: () {
+                            Haptics.light();
+                            final text = DeepLinkService.generateRestaurantShareText(
+                              restaurantName: restaurant.name,
+                              restaurantId: restaurant.id,
+                              cuisines: restaurant.tags.join(', '),
+                            );
+                            SharePlus.instance.share(ShareParams(text: text));
+                          },
+                          child: Container(
+                            width: 36.r,
+                            height: 36.r,
+                            decoration: BoxDecoration(
+                              color: Colors.black.withValues(alpha: 0.35),
+                              shape: BoxShape.circle,
+                            ),
+                            child: Icon(
+                              Icons.share_outlined,
+                              color: Colors.white,
+                              size: 18.sp,
+                            ),
                           ),
                         ),
                       ],
                     ),
-                  ),
-                  SizedBox(height: 16.h),
-                ],
+                  ],
+                ),
 
-                if (restaurant.offerBadges.isNotEmpty) ...[
-                  LayoutBuilder(
-                    builder: (context, constraints) {
-                      return Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: List.generate(
-                          (constraints.constrainWidth() / 8).floor(),
-                          (index) => Container(
-                            width: 4,
-                            height: 1,
-                            color: isDark
-                                ? AppColors.borderDark
-                                : Colors.grey.shade300,
+                const Spacer(),
+
+                // ---- Restaurant Info (bottom of hero) ----
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    // Name + meta
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            restaurant.name,
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              fontSize: 22.sp,
+                              fontWeight: FontWeight.w900,
+                              color: Colors.white,
+                              height: 1.15,
+                              shadows: [
+                                Shadow(
+                                  color: Colors.black.withValues(alpha: 0.4),
+                                  blurRadius: 6,
+                                ),
+                              ],
+                            ),
                           ),
-                        ),
-                      );
-                    },
-                  ),
-                  SizedBox(height: 16.h),
-                  Row(
-                    children: [
-                      _buildStarburstOfferIcon(),
-                      SizedBox(width: 12.w),
-                      Expanded(
-                        child: Text(
-                          restaurant.offerBadges.first,
-                          style: TextStyle(
-                            fontSize: 14.sp,
-                            fontWeight: FontWeight.w800,
-                            color: isDark
-                                ? Colors.white
-                                : const Color(0xFF1E1E1E),
+                          SizedBox(height: 4.h),
+                          // Delivery time · distance · area
+                          Text(
+                            [
+                              if (restaurant.deliveryTime.isNotEmpty) restaurant.deliveryTime,
+                              if (_resolvedDistanceKm(restaurant) case final km?)
+                                '${km.toStringAsFixed(1)} km',
+                              if (restaurant.area.isNotEmpty) restaurant.area,
+                            ].join('  ·  '),
+                            style: TextStyle(
+                              fontSize: 12.sp,
+                              color: Colors.white.withValues(alpha: 0.88),
+                              fontWeight: FontWeight.w500,
+                            ),
                           ),
-                        ),
+                          if (restaurant.priceForOne > 0) ...[
+                            SizedBox(height: 2.h),
+                            Text(
+                              'Min order ₹${restaurant.priceForOne.toStringAsFixed(0)}',
+                              style: TextStyle(
+                                fontSize: 11.5.sp,
+                                color: Colors.white.withValues(alpha: 0.78),
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ],
+                          SizedBox(height: 8.h),
+                          // Chips row: Pure Veg / Free Delivery / Offer badges
+                          Wrap(
+                            spacing: 6.w,
+                            runSpacing: 4.h,
+                            children: [
+                              if (restaurant.isPureVeg)
+                                _buildHeroBadgeChip('Pure Veg', const Color(0xFF008A45)),
+                              if (restaurant.isFreeDelivery)
+                                _buildHeroBadgeChip('Free Delivery', AppColors.primary),
+                              if (restaurant.isFeatured)
+                                _buildHeroBadgeChip('Featured', AppColors.primary),
+                            ],
+                          ),
+                          SizedBox(height: 12.h),
+                        ],
                       ),
-                    ],
-                  ),
-                ],
+                    ),
+                    SizedBox(width: 12.w),
+                    // Right side: Rating badge + Fav button
+                    Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        // Favorite button
+                        GestureDetector(
+                          onTap: () {
+                            Haptics.medium();
+                            ref
+                                .read(favoritesViewModelProvider.notifier)
+                                .toggle(restaurant.id, restaurant);
+                          },
+                          child: Container(
+                            width: 36.r,
+                            height: 36.r,
+                            margin: EdgeInsets.only(bottom: 8.h),
+                            decoration: BoxDecoration(
+                              color: Colors.black.withValues(alpha: 0.35),
+                              shape: BoxShape.circle,
+                            ),
+                            child: Icon(
+                              isFavorite ? Icons.favorite : Icons.favorite_border,
+                              color: isFavorite
+                                  ? const Color(0xFFFF4B72)
+                                  : Colors.white,
+                              size: 18.sp,
+                            ),
+                          ),
+                        ),
+                        // Rating badge
+                        Builder(
+                          builder: (context) {
+                            final displayRating = restaurant.rating > 0
+                                ? restaurant.rating.toStringAsFixed(1)
+                                : '4.5';
+                            return Column(
+                              children: [
+                                Container(
+                                  padding: EdgeInsets.symmetric(
+                                    horizontal: 8.w,
+                                    vertical: 5.h,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFF008A45),
+                                    borderRadius: BorderRadius.circular(10.r),
+                                  ),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Icon(
+                                        Icons.star_rounded,
+                                        color: Colors.white,
+                                        size: 13.sp,
+                                      ),
+                                      SizedBox(width: 3.w),
+                                      Text(
+                                        displayRating,
+                                        style: TextStyle(
+                                          color: Colors.white,
+                                          fontSize: 13.sp,
+                                          fontWeight: FontWeight.w900,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                if (restaurant.reviewCount > 0) ...[
+                                  SizedBox(height: 3.h),
+                                  Text(
+                                    'By ${restaurant.reviewCount}+',
+                                    style: TextStyle(
+                                      fontSize: 9.sp,
+                                      color: Colors.white.withValues(alpha: 0.8),
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
+                                ],
+                              ],
+                            );
+                          },
+                        ),
+                        SizedBox(height: 12.h),
+                      ],
+                    ),
+                  ],
+                ),
               ],
             ),
           ),
+
+          // ---- Closed overlay ----
+          if (!restaurant.isOpen)
+            Positioned(
+              bottom: 0,
+              left: 0,
+              right: 0,
+              child: Container(
+                padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 8.h),
+                color: Colors.black.withValues(alpha: 0.55),
+                child: Row(
+                  children: [
+                    Icon(Icons.access_time_rounded, color: Colors.white70, size: 14.sp),
+                    SizedBox(width: 6.w),
+                    Text(
+                      'Delivery currently unavailable',
+                      style: TextStyle(
+                        fontSize: 12.sp,
+                        color: Colors.white70,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildHeroBadgeChip(String label, Color color) {
+    return Container(
+      padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 3.h),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.15),
+        borderRadius: BorderRadius.circular(6.r),
+        border: Border.all(color: color.withValues(alpha: 0.8), width: 1),
+      ),
+      child: Text(
+        label,
+        style: TextStyle(
+          fontSize: 10.5.sp,
+          fontWeight: FontWeight.w700,
+          color: label == 'Pure Veg' ? const Color(0xFF55E47B) : Colors.white,
+        ),
       ),
     );
   }
@@ -662,124 +680,359 @@ class _RestaurantScreenState extends ConsumerState<RestaurantScreen> {
     final vm = ref.read(restaurantViewModelProvider.notifier);
 
     return Container(
-      padding: EdgeInsets.fromLTRB(16.w, 2.h, 16.w, 4.h),
       color: isDark ? AppColors.backgroundDark : Colors.white,
-      child: Container(
-        height: 52.h,
-        padding: EdgeInsets.symmetric(horizontal: 14.w),
-        decoration: BoxDecoration(
-          color: isDark ? AppColors.surfaceDark : Colors.white,
-          borderRadius: BorderRadius.circular(28.r),
-          border: Border.all(
-            color: AppColors.primary.withValues(alpha: 0.3),
-            width: 1.2,
-          ),
-          boxShadow: isDark
-              ? []
-              : [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.04),
-                    blurRadius: 10,
-                    offset: const Offset(0, 3),
-                  ),
-                ],
-        ),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: [
-            Icon(
-              Icons.search_rounded,
-              color: isDark
-                  ? AppColors.textSecondaryDark
-                  : AppColors.textSecondaryLight,
-              size: 22.sp,
-            ),
-            SizedBox(width: 10.w),
-            Expanded(
-              child: TextField(
-                controller: _searchController,
-                textAlignVertical: TextAlignVertical.center,
-                textInputAction: TextInputAction.search,
-                onSubmitted: (_) => FocusManager.instance.primaryFocus?.unfocus(),
-                onChanged: (val) {
-                  vm.setSearchQuery(val);
-                },
-                onTap: () {
-                  Haptics.light();
-                },
-                style: TextStyle(
-                  fontSize: 14.5.sp,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          // ---- Search Bar ----
+          Padding(
+            padding: EdgeInsets.fromLTRB(16.w, 6.h, 16.w, 4.h),
+            child: Container(
+              height: 38.h,
+              padding: EdgeInsets.symmetric(horizontal: 12.w),
+              decoration: BoxDecoration(
+                color: isDark ? AppColors.surfaceDark : const Color(0xFFF5F5F5),
+                borderRadius: BorderRadius.circular(20.r),
+                border: Border.all(
                   color: isDark
-                      ? AppColors.textPrimaryDark
-                      : AppColors.textPrimaryLight,
-                  fontWeight: FontWeight.w600,
-                ),
-                decoration: InputDecoration(
-                  hintText: 'Search for dishes in ${restaurant.name}',
-                  hintStyle: TextStyle(
-                    fontSize: 13.5.sp,
-                    color: (isDark
-                            ? AppColors.textSecondaryDark
-                            : AppColors.textSecondaryLight)
-                        .withValues(alpha: 0.65),
-                    fontWeight: FontWeight.w400,
-                  ),
-                  border: InputBorder.none,
-                  enabledBorder: InputBorder.none,
-                  focusedBorder: InputBorder.none,
-                  errorBorder: InputBorder.none,
-                  focusedErrorBorder: InputBorder.none,
-                  disabledBorder: InputBorder.none,
-                  isDense: true,
-                  contentPadding: EdgeInsets.zero,
+                      ? AppColors.borderDark
+                      : Colors.grey.shade300,
+                  width: 1,
                 ),
               ),
-            ),
-            if (state.searchQuery.isNotEmpty)
-              GestureDetector(
-                onTap: () {
-                  Haptics.light();
-                  _searchController.clear();
-                  vm.setSearchQuery('');
-                },
-                child: Padding(
-                  padding: EdgeInsets.symmetric(horizontal: 4.w),
-                  child: Icon(
-                    Icons.close_rounded,
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  Icon(
+                    Icons.search_rounded,
                     color: isDark
                         ? AppColors.textSecondaryDark
-                        : AppColors.textSecondaryLight,
-                    size: 20.sp,
+                        : Colors.grey[500],
+                    size: 18.sp,
                   ),
-                ),
-              ),
-            SizedBox(width: 6.w),
-            GestureDetector(
-              onTap: () async {
-                Haptics.light();
-                final query = await VoiceSearchDialog.show(context);
-                if (query != null && query.trim().isNotEmpty && context.mounted) {
-                  developer.log('[VOICE] Search query passed: "$query"', name: 'VOICE');
-                  developer.log('[VOICE] Search started for query: "$query"', name: 'VOICE');
-                  _searchController.text = query.trim();
-                  vm.setSearchQuery(query.trim());
-                }
-              },
-              child: Container(
-                padding: EdgeInsets.all(7.r),
-                decoration: BoxDecoration(
-                  color: AppColors.primaryTintStrong,
-                  shape: BoxShape.circle,
-                ),
-                child: Icon(
-                  Icons.mic_rounded,
-                  color: AppColors.primary,
-                  size: 20.sp,
-                ),
+                  SizedBox(width: 8.w),
+                  Expanded(
+                    child: TextField(
+                      controller: _searchController,
+                      textAlignVertical: TextAlignVertical.center,
+                      textInputAction: TextInputAction.search,
+                      onSubmitted: (_) => FocusManager.instance.primaryFocus?.unfocus(),
+                      onChanged: (val) {
+                        vm.setSearchQuery(val);
+                      },
+                      onTap: () {
+                        Haptics.light();
+                      },
+                      style: TextStyle(
+                        fontSize: 13.sp,
+                        color: isDark
+                            ? AppColors.textPrimaryDark
+                            : AppColors.textPrimaryLight,
+                        fontWeight: FontWeight.w500,
+                      ),
+                      decoration: InputDecoration(
+                        hintText: 'Search in ${restaurant.name}',
+                        hintStyle: TextStyle(
+                          fontSize: 12.5.sp,
+                          color: Colors.grey[500],
+                          fontWeight: FontWeight.w400,
+                        ),
+                        border: InputBorder.none,
+                        enabledBorder: InputBorder.none,
+                        focusedBorder: InputBorder.none,
+                        errorBorder: InputBorder.none,
+                        focusedErrorBorder: InputBorder.none,
+                        disabledBorder: InputBorder.none,
+                        isDense: true,
+                        contentPadding: EdgeInsets.zero,
+                      ),
+                    ),
+                  ),
+                  if (state.searchQuery.isNotEmpty)
+                    GestureDetector(
+                      onTap: () {
+                        Haptics.light();
+                        _searchController.clear();
+                        vm.setSearchQuery('');
+                      },
+                      child: Padding(
+                        padding: EdgeInsets.symmetric(horizontal: 4.w),
+                        child: Icon(
+                          Icons.close_rounded,
+                          color: isDark
+                              ? AppColors.textSecondaryDark
+                              : Colors.grey[500],
+                          size: 16.sp,
+                        ),
+                      ),
+                    ),
+                  SizedBox(width: 4.w),
+                  // Mic button
+                  GestureDetector(
+                    onTap: () async {
+                      Haptics.light();
+                      final query = await VoiceSearchDialog.show(context);
+                      if (query != null && query.trim().isNotEmpty && context.mounted) {
+                        developer.log('[VOICE] Search query passed: "$query"', name: 'VOICE');
+                        _searchController.text = query.trim();
+                        vm.setSearchQuery(query.trim());
+                      }
+                    },
+                    child: Icon(
+                      Icons.mic_outlined,
+                      color: isDark ? AppColors.textSecondaryDark : Colors.grey[500],
+                      size: 18.sp,
+                    ),
+                  ),
+                ],
               ),
             ),
-          ],
-        ),
+          ),
+
+          // ---- Filter Chips Row ----
+          _buildFilterChipsRow(context, state),
+
+          // ---- Divider ----
+          Divider(
+            height: 1,
+            thickness: 1,
+            color: isDark ? AppColors.borderDark : Colors.grey.shade100,
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ==================== FILTER CHIPS ROW ====================
+
+  Widget _buildFilterChipsRow(BuildContext context, RestaurantState state) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final vm = ref.read(restaurantViewModelProvider.notifier);
+
+    return SizedBox(
+      height: 32.h,
+      child: ListView(
+        scrollDirection: Axis.horizontal,
+        padding: EdgeInsets.symmetric(horizontal: 16.w),
+        children: [
+          // Non-Veg toggle chip
+          GestureDetector(
+            onTap: () {
+              Haptics.light();
+              if (state.isVegOnly) vm.toggleVegOnly();
+              vm.toggleNonVegOnly();
+            },
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 200),
+              margin: EdgeInsets.only(right: 6.w),
+              padding: EdgeInsets.symmetric(horizontal: 8.w),
+              decoration: BoxDecoration(
+                color: state.isNonVegOnly
+                    ? AppColors.primary.withValues(alpha: 0.12)
+                    : (isDark ? AppColors.surfaceDark : Colors.white),
+                borderRadius: BorderRadius.circular(16.r),
+                border: Border.all(
+                  color: state.isNonVegOnly
+                      ? AppColors.primary
+                      : (isDark ? AppColors.borderDark : Colors.grey.shade300),
+                  width: 1,
+                ),
+              ),
+              child: Row(
+                children: [
+                  // Non-veg toggle track
+                  Container(
+                    width: 24.w,
+                    height: 14.h,
+                    decoration: BoxDecoration(
+                      color: state.isNonVegOnly
+                          ? AppColors.primary.withValues(alpha: 0.2)
+                          : Colors.grey.shade300,
+                      borderRadius: BorderRadius.circular(7.r),
+                      border: Border.all(
+                        color: state.isNonVegOnly
+                            ? AppColors.primary
+                            : Colors.grey.shade400,
+                        width: 1,
+                      ),
+                    ),
+                    child: AnimatedAlign(
+                      duration: const Duration(milliseconds: 200),
+                      alignment: state.isNonVegOnly
+                          ? Alignment.centerRight
+                          : Alignment.centerLeft,
+                      child: Padding(
+                        padding: EdgeInsets.all(1.5.r),
+                        child: Container(
+                          width: 8.w,
+                          height: 8.h,
+                          decoration: BoxDecoration(
+                            color: state.isNonVegOnly
+                                ? AppColors.primary
+                                : Colors.grey.shade500,
+                            shape: BoxShape.circle,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                  SizedBox(width: 5.w),
+                  Text(
+                    'Non-Veg',
+                    style: TextStyle(
+                      fontSize: 11.5.sp,
+                      fontWeight: FontWeight.w600,
+                      color: state.isNonVegOnly
+                          ? AppColors.primary
+                          : (isDark ? AppColors.textSecondaryDark : Colors.grey[700]),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+
+          // Veg toggle chip
+          GestureDetector(
+            onTap: () {
+              Haptics.light();
+              if (state.isNonVegOnly) vm.toggleNonVegOnly();
+              vm.toggleVegOnly();
+            },
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 200),
+              margin: EdgeInsets.only(right: 6.w),
+              padding: EdgeInsets.symmetric(horizontal: 8.w),
+              decoration: BoxDecoration(
+                color: state.isVegOnly
+                    ? const Color(0xFF008A45).withValues(alpha: 0.10)
+                    : (isDark ? AppColors.surfaceDark : Colors.white),
+                borderRadius: BorderRadius.circular(16.r),
+                border: Border.all(
+                  color: state.isVegOnly
+                      ? const Color(0xFF008A45)
+                      : (isDark ? AppColors.borderDark : Colors.grey.shade300),
+                  width: 1,
+                ),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  _buildVegIcon(size: 10),
+                  SizedBox(width: 4.w),
+                  Text(
+                    'Veg',
+                    style: TextStyle(
+                      fontSize: 11.5.sp,
+                      fontWeight: FontWeight.w600,
+                      color: state.isVegOnly
+                          ? const Color(0xFF008A45)
+                          : (isDark ? AppColors.textSecondaryDark : Colors.grey[700]),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+
+          // Best Seller toggle chip
+          GestureDetector(
+            onTap: () {
+              Haptics.light();
+              vm.toggleBestSeller();
+            },
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 200),
+              margin: EdgeInsets.only(right: 6.w),
+              padding: EdgeInsets.symmetric(horizontal: 8.w),
+              decoration: BoxDecoration(
+                color: state.isBestSellerOnly
+                    ? const Color(0xFFFF5200).withValues(alpha: 0.12)
+                    : (isDark ? AppColors.surfaceDark : Colors.white),
+                borderRadius: BorderRadius.circular(16.r),
+                border: Border.all(
+                  color: state.isBestSellerOnly
+                      ? const Color(0xFFFF5200)
+                      : (isDark ? AppColors.borderDark : Colors.grey.shade300),
+                  width: 1,
+                ),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    Icons.local_fire_department_rounded,
+                    size: 14.sp,
+                    color: state.isBestSellerOnly
+                        ? const Color(0xFFFF5200)
+                        : (isDark ? AppColors.textSecondaryDark : Colors.grey[600]),
+                  ),
+                  SizedBox(width: 4.w),
+                  Text(
+                    'Best seller',
+                    style: TextStyle(
+                      fontSize: 11.5.sp,
+                      fontWeight: FontWeight.w600,
+                      color: state.isBestSellerOnly
+                          ? const Color(0xFFFF5200)
+                          : (isDark ? AppColors.textSecondaryDark : Colors.grey[700]),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+
+          // Rating sort toggle chip (shows highest rating food first)
+          GestureDetector(
+            onTap: () {
+              Haptics.light();
+              vm.toggleRatingSort();
+            },
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 200),
+              margin: EdgeInsets.only(right: 6.w),
+              padding: EdgeInsets.symmetric(horizontal: 8.w),
+              decoration: BoxDecoration(
+                color: state.isRatingSort
+                    ? const Color(0xFF008A45).withValues(alpha: 0.12)
+                    : (isDark ? AppColors.surfaceDark : Colors.white),
+                borderRadius: BorderRadius.circular(16.r),
+                border: Border.all(
+                  color: state.isRatingSort
+                      ? const Color(0xFF008A45)
+                      : (isDark ? AppColors.borderDark : Colors.grey.shade300),
+                  width: 1,
+                ),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    Icons.star_rate_rounded,
+                    size: 14.sp,
+                    color: state.isRatingSort
+                        ? const Color(0xFF008A45)
+                        : (isDark ? AppColors.textSecondaryDark : Colors.grey[600]),
+                  ),
+                  SizedBox(width: 4.w),
+                  Text(
+                    'Rating',
+                    style: TextStyle(
+                      fontSize: 11.5.sp,
+                      fontWeight: FontWeight.w600,
+                      color: state.isRatingSort
+                          ? const Color(0xFF008A45)
+                          : (isDark ? AppColors.textSecondaryDark : Colors.grey[700]),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+
+          SizedBox(width: 4.w),
+        ],
       ),
     );
   }
@@ -913,128 +1166,6 @@ class _RestaurantScreenState extends ConsumerState<RestaurantScreen> {
     );
   }
 
-  // ==================== SINGLE SEGMENTED FILTER ====================
-
-  Widget _buildSegmentedFilter(BuildContext context, RestaurantState state) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final vm = ref.read(restaurantViewModelProvider.notifier);
-
-    int selectedIndex = 0;
-    if (state.isVegOnly) {
-      selectedIndex = 1;
-    } else if (state.isNonVegOnly) {
-      selectedIndex = 2;
-    }
-
-    return Padding(
-      padding: EdgeInsets.symmetric(horizontal: 16.w),
-      child: Container(
-        height: 40.h,
-        padding: EdgeInsets.all(4.r),
-        decoration: BoxDecoration(
-          color: isDark ? AppColors.surfaceDark : Colors.grey.shade100,
-          borderRadius: BorderRadius.circular(20.r),
-          border: Border.all(
-            color: isDark ? AppColors.borderDark : Colors.grey.shade300,
-            width: 1,
-          ),
-        ),
-        child: Row(
-          children: [
-            Expanded(
-              child: _buildSegmentSegment(
-                context: context,
-                label: 'All',
-                isSelected: selectedIndex == 0,
-                icon: null,
-                onTap: () {
-                  Haptics.light();
-                  if (state.isVegOnly) vm.toggleVegOnly();
-                  if (state.isNonVegOnly) vm.toggleNonVegOnly();
-                },
-              ),
-            ),
-            Expanded(
-              child: _buildSegmentSegment(
-                context: context,
-                label: 'Veg',
-                isSelected: selectedIndex == 1,
-                icon: _buildVegIcon(size: 10),
-                onTap: () {
-                  Haptics.light();
-                  if (state.isNonVegOnly) vm.toggleNonVegOnly();
-                  vm.toggleVegOnly();
-                },
-              ),
-            ),
-            Expanded(
-              child: _buildSegmentSegment(
-                context: context,
-                label: 'Non-Veg',
-                isSelected: selectedIndex == 2,
-                icon: _buildNonVegIcon(size: 10),
-                onTap: () {
-                  Haptics.light();
-                  if (state.isVegOnly) vm.toggleVegOnly();
-                  vm.toggleNonVegOnly();
-                },
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildSegmentSegment({
-    required BuildContext context,
-    required String label,
-    required bool isSelected,
-    Widget? icon,
-    required VoidCallback onTap,
-  }) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-
-    return GestureDetector(
-      onTap: onTap,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
-        alignment: Alignment.center,
-        decoration: BoxDecoration(
-          color: isSelected
-              ? (isDark ? AppColors.cardDark : Colors.white)
-              : Colors.transparent,
-          borderRadius: BorderRadius.circular(16.r),
-          boxShadow: isSelected
-              ? [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: isDark ? 0.3 : 0.08),
-                    blurRadius: 6,
-                    offset: const Offset(0, 2),
-                  ),
-                ]
-              : [],
-        ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            if (icon != null) ...[icon, SizedBox(width: 4.w)],
-            Text(
-              label,
-              style: TextStyle(
-                fontSize: 12.sp,
-                fontWeight: isSelected ? FontWeight.w800 : FontWeight.w600,
-                color: isSelected
-                    ? _priceGreen
-                    : (isDark ? AppColors.textSecondaryDark : Colors.grey[700]),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
   // ==================== CATEGORY CHIP BAR (jump navigation) ====================
 
   Widget _buildCategoryChipsBar(BuildContext context, RestaurantState state) {
@@ -1056,10 +1187,10 @@ class _RestaurantScreenState extends ConsumerState<RestaurantScreen> {
       categories.add(cat);
     }
 
-    if (categories.length <= 1) return const SizedBox.shrink();
+    if (categories.isEmpty) return const SizedBox.shrink();
 
     return SizedBox(
-      height: 40.h,
+      height: 32.h,
       child: ListView.separated(
         controller: _chipScrollController,
         scrollDirection: Axis.horizontal,
@@ -1077,12 +1208,12 @@ class _RestaurantScreenState extends ConsumerState<RestaurantScreen> {
             child: AnimatedContainer(
               duration: const Duration(milliseconds: 200),
               alignment: Alignment.center,
-              padding: EdgeInsets.symmetric(horizontal: 14.w, vertical: 8.h),
+              padding: EdgeInsets.symmetric(horizontal: 14.w, vertical: 5.h),
               decoration: BoxDecoration(
                 color: isActive
                     ? AppColors.primary
                     : (isDark ? AppColors.surfaceDark : Colors.grey.shade100),
-                borderRadius: BorderRadius.circular(20.r),
+                borderRadius: BorderRadius.circular(16.r),
                 border: Border.all(
                   color: isActive
                       ? AppColors.primary
@@ -1093,7 +1224,7 @@ class _RestaurantScreenState extends ConsumerState<RestaurantScreen> {
               child: Text(
                 category.name,
                 style: TextStyle(
-                  fontSize: 13.sp,
+                  fontSize: 12.sp,
                   fontWeight: isActive ? FontWeight.w800 : FontWeight.w600,
                   color: isActive
                       ? Colors.white
@@ -1145,36 +1276,80 @@ class _RestaurantScreenState extends ConsumerState<RestaurantScreen> {
       key: _topAnchorKey,
       children: [
         for (final category in sections) ...[
-          Padding(
-            key: _sectionKeys.putIfAbsent(category.id, () => GlobalKey()),
-            padding: EdgeInsets.fromLTRB(16.w, 0, 16.w, 12.h),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  category.name,
-                  style: TextStyle(
-                    fontSize: 16.sp,
-                    fontWeight: FontWeight.w800,
-                    color: isDark ? Colors.white : const Color(0xFF1E1E1E),
+          // ---- Category Header (tappable collapse/expand) ----
+          GestureDetector(
+            onTap: () {
+              Haptics.light();
+              setState(() {
+                if (_collapsedCategories.contains(category.id)) {
+                  _collapsedCategories.remove(category.id);
+                } else {
+                  _collapsedCategories.add(category.id);
+                }
+              });
+            },
+            child: Container(
+              key: _sectionKeys.putIfAbsent(category.id, () => GlobalKey()),
+              color: Colors.transparent,
+              padding: EdgeInsets.fromLTRB(16.w, 2.h, 16.w, 8.h),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      category.name,
+                      style: TextStyle(
+                        fontSize: 16.sp,
+                        fontWeight: FontWeight.w800,
+                        color: isDark ? Colors.white : const Color(0xFF1E1E1E),
+                      ),
+                    ),
                   ),
-                ),
-                Text(
-                  '${grouped[category.id]!.length} items',
-                  style: TextStyle(
-                    fontSize: 12.sp,
-                    color: isDark
-                        ? AppColors.textSecondaryDark
-                        : Colors.grey[600],
-                    fontWeight: FontWeight.w600,
+                  Text(
+                    '(${grouped[category.id]!.length})',
+                    style: TextStyle(
+                      fontSize: 13.sp,
+                      color: isDark
+                          ? AppColors.textSecondaryDark
+                          : Colors.grey[600],
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
-                ),
-              ],
+                  SizedBox(width: 6.w),
+                  AnimatedRotation(
+                    turns: _collapsedCategories.contains(category.id) ? 0.5 : 0.0,
+                    duration: const Duration(milliseconds: 250),
+                    child: Icon(
+                      Icons.keyboard_arrow_up_rounded,
+                      size: 22.sp,
+                      color: isDark ? AppColors.textSecondaryDark : Colors.grey[600],
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
-          _buildDishesGrid(context, grouped[category.id]!, cartState),
-          SizedBox(height: 24.h),
+
+          // ---- Category Items (collapsible) ----
+          AnimatedCrossFade(
+            duration: const Duration(milliseconds: 280),
+            crossFadeState: _collapsedCategories.contains(category.id)
+                ? CrossFadeState.showSecond
+                : CrossFadeState.showFirst,
+            firstChild: _buildDishesGrid(context, grouped[category.id]!, cartState),
+            secondChild: const SizedBox.shrink(),
+          ),
+
+          // ---- Divider between categories ----
+          Padding(
+            padding: EdgeInsets.fromLTRB(16.w, 12.h, 16.w, 4.h),
+            child: Divider(
+              height: 1,
+              thickness: 1,
+              color: isDark ? AppColors.borderDark : Colors.grey.shade200,
+            ),
+          ),
         ],
+        SizedBox(height: 8.h),
       ],
     );
   }
@@ -1339,90 +1514,108 @@ class _RestaurantScreenState extends ConsumerState<RestaurantScreen> {
     int quantity,
     String? cartItemId,
   ) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
     final hasQty = quantity > 0;
 
-    return AnimatedContainer(
-      duration: const Duration(milliseconds: 250),
-      curve: Curves.easeOutCubic,
-      padding: EdgeInsets.symmetric(
-        horizontal: hasQty ? 6.w : 16.w,
-        vertical: hasQty ? 4.h : 6.h,
+    return AnimatedSwitcher(
+      duration: const Duration(milliseconds: 220),
+      switchInCurve: Curves.easeOutBack,
+      switchOutCurve: Curves.easeIn,
+      transitionBuilder: (child, anim) => ScaleTransition(
+        scale: anim,
+        child: FadeTransition(opacity: anim, child: child),
       ),
-      decoration: BoxDecoration(
-        color: isDark ? AppColors.cardDark : Colors.white,
-        border: Border.all(
-          color: _priceGreen.withValues(alpha: hasQty ? 0.4 : 0.3),
-        ),
-        borderRadius: BorderRadius.circular(8.r),
-      ),
-      child: Material(
-        type: MaterialType.transparency,
-        child: AnimatedSwitcher(
-          duration: const Duration(milliseconds: 200),
-          switchInCurve: Curves.easeOutBack,
-          switchOutCurve: Curves.easeIn,
-          transitionBuilder: (child, anim) => ScaleTransition(
-            scale: anim,
-            child: FadeTransition(opacity: anim, child: child),
-          ),
-          child: !hasQty
-              ? GestureDetector(
-                  key: const ValueKey('add'),
-                  onTap: () => _handleFirstAddToCart(dish),
-                  child: Text(
-                    'ADD',
+      child: !hasQty
+          // ---- Simple + circle button ----
+          ? GestureDetector(
+              key: const ValueKey('add_circle'),
+              onTap: () => _handleFirstAddToCart(dish),
+              child: Container(
+                width: 32.r,
+                height: 32.r,
+                decoration: BoxDecoration(
+                  color: AppColors.primary,
+                  shape: BoxShape.circle,
+                  boxShadow: [
+                    BoxShadow(
+                      color: AppColors.primary.withValues(alpha: 0.35),
+                      blurRadius: 8,
+                      offset: const Offset(0, 3),
+                    ),
+                  ],
+                ),
+                child: Icon(
+                  Icons.add_rounded,
+                  color: Colors.white,
+                  size: 20.sp,
+                ),
+              ),
+            )
+          // ---- Stepper pill ----
+          : Container(
+              key: const ValueKey('stepper_pill'),
+              height: 32.h,
+              padding: EdgeInsets.symmetric(horizontal: 4.w),
+              decoration: BoxDecoration(
+                color: AppColors.primary,
+                borderRadius: BorderRadius.circular(16.r),
+                boxShadow: [
+                  BoxShadow(
+                    color: AppColors.primary.withValues(alpha: 0.35),
+                    blurRadius: 8,
+                    offset: const Offset(0, 3),
+                  ),
+                ],
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  GestureDetector(
+                    onTap: cartItemId == null
+                        ? null
+                        : () {
+                            Haptics.light();
+                            ref
+                                .read(cartViewModelProvider.notifier)
+                                .updateQuantity(cartItemId, quantity - 1);
+                          },
+                    child: Padding(
+                      padding: EdgeInsets.symmetric(horizontal: 6.w),
+                      child: Icon(
+                        Icons.remove_rounded,
+                        color: Colors.white,
+                        size: 15.sp,
+                      ),
+                    ),
+                  ),
+                  Text(
+                    '$quantity',
                     style: TextStyle(
-                      color: _priceGreen,
+                      color: Colors.white,
                       fontSize: 13.sp,
                       fontWeight: FontWeight.w800,
                     ),
                   ),
-                )
-              : Row(
-                  key: const ValueKey('stepper'),
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    GestureDetector(
-                      onTap: cartItemId == null
-                          ? null
-                          : () {
-                              Haptics.light();
-                              ref
-                                  .read(cartViewModelProvider.notifier)
-                                  .updateQuantity(cartItemId, quantity - 1);
-                            },
+                  GestureDetector(
+                    onTap: cartItemId == null
+                        ? null
+                        : () {
+                            Haptics.light();
+                            ref
+                                .read(cartViewModelProvider.notifier)
+                                .updateQuantity(cartItemId, quantity + 1);
+                          },
+                    child: Padding(
+                      padding: EdgeInsets.symmetric(horizontal: 6.w),
                       child: Icon(
-                        Icons.remove,
-                        color: _priceGreen,
-                        size: 14.sp,
+                        Icons.add_rounded,
+                        color: Colors.white,
+                        size: 15.sp,
                       ),
                     ),
-                    SizedBox(width: 6.w),
-                    Text(
-                      '$quantity',
-                      style: TextStyle(
-                        color: _priceGreen,
-                        fontSize: 13.sp,
-                        fontWeight: FontWeight.w800,
-                      ),
-                    ),
-                    SizedBox(width: 6.w),
-                    GestureDetector(
-                      onTap: cartItemId == null
-                          ? null
-                          : () {
-                              Haptics.light();
-                              ref
-                                  .read(cartViewModelProvider.notifier)
-                                  .updateQuantity(cartItemId, quantity + 1);
-                            },
-                      child: Icon(Icons.add, color: _priceGreen, size: 14.sp),
-                    ),
-                  ],
-                ),
-        ),
-      ),
+                  ),
+                ],
+              ),
+            ),
     );
   }
 
@@ -1585,31 +1778,6 @@ class _RestaurantScreenState extends ConsumerState<RestaurantScreen> {
     );
   }
 
-  // ==================== SHARED HELPERS ====================
-
-  Widget _buildStarburstOfferIcon() {
-    return SizedBox(
-      width: 28.sp,
-      height: 28.sp,
-      child: Stack(
-        alignment: Alignment.center,
-        children: [
-          CustomPaint(
-            size: Size(28.sp, 28.sp),
-            painter: _StarburstPainter(color: AppColors.primary),
-          ),
-          Text(
-            '%',
-            style: TextStyle(
-              color: Colors.white,
-              fontSize: 16.sp,
-              fontWeight: FontWeight.w900,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
 
   Widget _buildVegIcon({double size = 10}) {
     return Container(
@@ -1671,10 +1839,10 @@ class _StickySearchBarDelegate extends SliverPersistentHeaderDelegate {
   }
 
   @override
-  double get maxExtent => 58.h + topPadding;
+  double get maxExtent => 84.h + topPadding;
 
   @override
-  double get minExtent => 58.h + topPadding;
+  double get minExtent => 84.h + topPadding;
 
   @override
   bool shouldRebuild(covariant _StickySearchBarDelegate oldDelegate) {
@@ -1735,37 +1903,3 @@ class _TrianglePainter extends CustomPainter {
   bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }
 
-class _StarburstPainter extends CustomPainter {
-  final Color color;
-  _StarburstPainter({required this.color});
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final paint = Paint()
-      ..color = color
-      ..style = PaintingStyle.fill;
-
-    final path = Path();
-    final center = Offset(size.width / 2, size.height / 2);
-    final outerRadius = size.width / 2;
-    final innerRadius = outerRadius * 0.8;
-    const points = 12;
-
-    for (int i = 0; i < points * 2; i++) {
-      final radius = i.isEven ? outerRadius : innerRadius;
-      final angle = (i * math.pi) / points;
-      final x = center.dx + radius * math.cos(angle);
-      final y = center.dy + radius * math.sin(angle);
-      if (i == 0) {
-        path.moveTo(x, y);
-      } else {
-        path.lineTo(x, y);
-      }
-    }
-    path.close();
-    canvas.drawPath(path, paint);
-  }
-
-  @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
-}

@@ -13,6 +13,7 @@ import 'package:permission_handler/permission_handler.dart';
 import '../generated/l10n/app_localizations.dart';
 
 import 'core/constants/app_constants.dart';
+import 'data/models/user_model.dart';
 import 'di/push_providers.dart';
 import 'platform/notifications/push_service.dart';
 import 'presentation/auth/viewmodels/auth_viewmodel.dart';
@@ -45,7 +46,12 @@ class _FoodUserApplicationState extends ConsumerState<FoodUserApplication> {
         onPermanentlyDenied: _showPermissionExplanationDialog,
       );
 
-      final user = ref.read(authViewModelProvider).value;
+      UserModel? user = ref.read(authViewModelProvider).value;
+      if (user == null) {
+        try {
+          user = await ref.read(authViewModelProvider.future);
+        } catch (_) {}
+      }
       await pushService.performAppStartCheck(
         isLoggedIn: user != null,
         user: user,

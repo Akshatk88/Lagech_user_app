@@ -448,7 +448,7 @@ class _CartScreenState extends ConsumerState<CartScreen> {
                       // Cancellation Policy Section
                       _buildCancellationPolicy(secondaryColor),
 
-                      const SizedBox(height: 80), // Space for bottom footer
+                      const SizedBox(height: 16),
                     ],
                   ),
                 ),
@@ -457,7 +457,7 @@ class _CartScreenState extends ConsumerState<CartScreen> {
           ],
         ),
       ),
-      bottomSheet: _buildBottomDeliveryFooter(
+      bottomNavigationBar: _buildBottomDeliveryFooter(
         context,
         toPay,
         isDark,
@@ -2436,7 +2436,7 @@ class _CartScreenState extends ConsumerState<CartScreen> {
     }
 
     return Container(
-      padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
+      padding: const EdgeInsets.fromLTRB(16, 10, 16, 12),
       decoration: BoxDecoration(
         color: isDark ? AppColors.surfaceDark : Colors.white,
         borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
@@ -2475,7 +2475,7 @@ class _CartScreenState extends ConsumerState<CartScreen> {
               child: Container(
                 padding: const EdgeInsets.symmetric(
                   horizontal: 14,
-                  vertical: 10,
+                  vertical: 9,
                 ),
                 decoration: BoxDecoration(
                   color: isDark
@@ -2531,12 +2531,12 @@ class _CartScreenState extends ConsumerState<CartScreen> {
               ),
             ),
 
-            const SizedBox(height: 14),
+            const SizedBox(height: 10),
 
             // Proceed to Payment Button
             SizedBox(
               width: double.infinity,
-              height: 56,
+              height: 52,
               child: ElevatedButton(
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppColors.primary,

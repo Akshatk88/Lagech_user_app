@@ -203,14 +203,16 @@ class FloatingViewCartBarState extends ConsumerState<FloatingViewCartBar> with T
       bottom: shouldShow ? widget.bottomOffset : widget.bottomOffset - 144.0,
       left: 20,
       right: 20,
-      child: AnimatedScale(
-        duration: const Duration(milliseconds: 500),
-        curve: Curves.elasticOut,
-        scale: shouldShow ? 1.0 : 0.0, // Grows from 0%
-        child: ScaleTransition(
-          scale: _scaleAnimation,
-          child: GestureDetector(
-            onTap: widget.onTap,
+      child: IgnorePointer(
+        ignoring: !shouldShow,
+        child: AnimatedScale(
+          duration: const Duration(milliseconds: 500),
+          curve: Curves.elasticOut,
+          scale: shouldShow ? 1.0 : 0.0, // Grows from 0%
+          child: ScaleTransition(
+            scale: _scaleAnimation,
+            child: GestureDetector(
+              onTap: widget.onTap,
             child: AnimatedBuilder(
               animation: _bumpController,
               builder: (context, child) {
@@ -296,12 +298,13 @@ class FloatingViewCartBarState extends ConsumerState<FloatingViewCartBar> with T
                     ),
                   ),
                 );
-              }
+              },
             ),
           ),
         ),
       ),
-          ),
+    ),
+  ),
         ],
       ),
     );

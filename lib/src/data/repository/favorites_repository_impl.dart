@@ -47,19 +47,19 @@ class FavoritesRepositoryImpl implements FavoritesRepository {
       ids.remove(restaurantId);
     }
 
+    // Save locally FIRST
+    await prefs.setStringList(_keyRestaurant, ids.toList());
+
     if (_remote != null) {
       try {
         await _remote.toggleFavoriteRestaurant(restaurantId, isFavorite);
-        await prefs.setStringList(_keyRestaurant, ids.toList());
       } catch (e) {
         developer.log(
           '[FAVORITE] [Repository Error] Toggle restaurant failed for ID: $restaurantId | Action: ${isFavorite ? "ADD" : "REMOVE"} | Error: $e',
           name: 'FAVORITE',
         );
-        rethrow;
+        // Do not rethrow, allow offline usage
       }
-    } else {
-      await prefs.setStringList(_keyRestaurant, ids.toList());
     }
   }
 
@@ -74,19 +74,19 @@ class FavoritesRepositoryImpl implements FavoritesRepository {
       ids.remove(foodId);
     }
 
+    // Save locally FIRST
+    await prefs.setStringList(_keyFood, ids.toList());
+
     if (_remote != null) {
       try {
         await _remote.toggleFavoriteFood(foodId, isFavorite);
-        await prefs.setStringList(_keyFood, ids.toList());
       } catch (e) {
         developer.log(
           '[FAVORITE] [Repository Error] Toggle food failed for ID: $foodId | Action: ${isFavorite ? "ADD" : "REMOVE"} | Error: $e',
           name: 'FAVORITE',
         );
-        rethrow;
+        // Do not rethrow, allow offline usage
       }
-    } else {
-      await prefs.setStringList(_keyFood, ids.toList());
     }
   }
 
