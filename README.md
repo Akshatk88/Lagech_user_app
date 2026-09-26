@@ -1,2 +1,2 @@
-# LAGECH USER
+# LAGECH
 
